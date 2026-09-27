@@ -104,10 +104,7 @@ function timeline(session) {
  */
 function keyDecisions(scenario, session) {
   const out = []
-  for (const entry of session.log) {
-    if (entry.type !== 'action') continue
-    if (!entry.key) continue
-
+  for (const entry of pickKey(session)) {
     const state = scenario.states?.[entry.stateId]
     const siblings = (state?.actions ?? []).filter(
       (a) => a.id !== entry.actionId && (entry.offered ?? []).includes(a.id)
@@ -247,6 +244,28 @@ function ruleTexts(scenario, session, kind) {
     out.push({ text: r.text, step: null, authored: true })
   }
   return out
+}
+
+/**
+ * Какие решения разбирать подробно.
+ *
+ * Обычно это те, что автор сценария пометил ключевыми. Но худшее прохождение
+ * часто идёт мимо всех помеченных развилок — а именно такому игроку
+ * альтернатива нужнее всего. Поэтому если ключевых решений не набралось,
+ * берутся те, что сильнее всего сдвинули шкалы: разбор без единой
+ * альтернативы бесполезен.
+ */
+function pickKey(session) {
+  const actions = session.log.filter((l) => l.type === 'action')
+  const marked = actions.filter((l) => l.key)
+  if (marked.length) return marked
+
+  const weight = (l) =>
+    Math.abs(num(l.effects?.loyalty)) + Math.abs(num(l.effects?.safety))
+  return [...actions]
+    .sort((a, b) => weight(b) - weight(a))
+    .slice(0, 2)
+    .sort((a, b) => a.step - b.step)
 }
 
 const dedupe = (list) => {

@@ -359,7 +359,7 @@ function commit(scenario, session, action, { now, said, intent, timedOut }) {
   next.log.push({
     type: 'action',
     step: next.step,
-    stateId: state.id,
+    stateId: session.stateId,
     stateText: state.text,
     actionId: action.id,
     actionLabel: action.label,
@@ -417,7 +417,7 @@ function timeout(scenario, session, now, mode) {
   const action = t.action
     ? findAction(scenario, session, t.action)
     : {
-        id: `${state.id}:timeout`,
+        id: `${session.stateId}:timeout`,
         label: t.label ?? 'Решение не принято вовремя',
         kind: 'idle',
         effects: t.effects,
@@ -462,7 +462,7 @@ function sequence(scenario, session, input, now) {
 
   const labels = Object.fromEntries((state.items ?? []).map((i) => [i.id, i.label]))
   const action = {
-    id: `${state.id}:${grade}`,
+    id: `${session.stateId}:${grade}`,
     label: order.map((id) => labels[id]).join(' → '),
     kind: 'sequence',
     effects: branch.effects,
