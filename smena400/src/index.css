@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Тёмная тема — основная: проводник работает с планшетом в вагоне,
+ * и приборная подача читается как инструмент, а не как сайт.
+ * Светлая включается по системной настройке — для дневной учебной комнаты.
+ */
+:root {
+  --c-ground: 14 20 24;
+  --c-raised: 22 31 37;
+  --c-sunken: 9 13 16;
+  --c-hair: 36 50 59;
+  --c-ink: 232 238 241;
+  --c-muted: 147 164 174;
+  --c-faint: 104 122 133;
+  --c-accent: 91 140 255;
+  --c-safety: 47 182 124;
+  --c-loyalty: 232 163 61;
+  --c-danger: 226 86 77;
+  --c-warn: 228 178 60;
+  --c-good: 47 182 124;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --c-ground: 245 247 248;
+    --c-raised: 255 255 255;
+    --c-sunken: 234 238 240;
+    --c-hair: 208 216 221;
+    --c-ink: 18 26 31;
+    --c-muted: 88 102 112;
+    --c-faint: 128 142 151;
+    --c-accent: 30 94 222;
+    --c-safety: 21 134 87;
+    --c-loyalty: 173 106 12;
+    --c-danger: 190 45 37;
+    --c-warn: 160 116 10;
+    --c-good: 21 134 87;
+    color-scheme: light;
+  }
+}
+
+:root[data-theme='light'] {
+  --c-ground: 245 247 248;
+  --c-raised: 255 255 255;
+  --c-sunken: 234 238 240;
+  --c-hair: 208 216 221;
+  --c-ink: 18 26 31;
+  --c-muted: 88 102 112;
+  --c-faint: 128 142 151;
+  --c-accent: 30 94 222;
+  --c-safety: 21 134 87;
+  --c-loyalty: 173 106 12;
+  --c-danger: 190 45 37;
+  --c-warn: 160 116 10;
+  --c-good: 21 134 87;
+  color-scheme: light;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    @apply bg-ground text-ink font-sans antialiased;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* Заголовки — узкий гротеск: он держит длинные русские слова в одну строку. */
+  h1, h2, h3 { @apply font-display; text-wrap: balance; }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-accent));
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .card { @apply bg-raised border border-hair; }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
+           border border-hair bg-raised text-ink text-sm
+           transition-colors select-none;
+    min-height: 44px;
+  }
+  .btn:hover:not(:disabled) { @apply border-accent; }
+  .btn:disabled { @apply opacity-40 cursor-not-allowed; }
+
+  .btn-primary {
+    @apply bg-accent text-white border-accent font-medium;
+  }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+
+  .btn-ghost { @apply bg-transparent border-transparent text-muted; }
+  .btn-ghost:hover:not(:disabled) { @apply text-ink border-hair; }
+
+  /* Основная кнопка действия в ситуации: крупная цель под палец. */
+  .action {
+    @apply w-full text-left px-4 py-3.5 bg-raised border border-hair
+           transition-colors flex gap-3 items-start;
+    min-height: 56px;
+  }
+  .action:hover:not(:disabled) { @apply border-accent bg-sunken; }
+  .action:disabled { @apply opacity-45 cursor-not-allowed; }
+
+  .input {
+    @apply w-full bg-sunken border border-hair px-3 py-2.5 text-ink
+           placeholder:text-faint;
+  }
+  .input:focus { @apply border-accent outline-none; }
+
+  .label {
+    @apply font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-faint;
+  }
+
+  .num { @apply font-mono tabular-nums; }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2 py-1 border border-hair
+           font-mono text-[0.6875rem] uppercase tracking-wider text-muted;
+  }
+}
