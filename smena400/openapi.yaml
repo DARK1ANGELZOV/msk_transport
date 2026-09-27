@@ -1,0 +1,695 @@
+openapi: 3.0.3
+info:
+  title: СМЕНА 400 — API тренажёра
+  version: "1.0.0"
+  description: |
+    API интерактивного тренажёра принятия решений для проводников ВСМ.
+
+    **Главное свойство контракта:** клиент не получает граф сценария. Ему
+    отдаётся текущее состояние и список действий, доступных прямо сейчас.
+    Ни переходов, ни эффектов, ни будущих состояний в ответах нет — иначе
+    все ветки и финалы были бы видны в исходниках страницы, а отложенное
+    последствие, которое можно прочитать заранее, перестаёт быть последствием.
+
+    **Идентификация:** анонимная, по HttpOnly-куке `smena400_player`, которую
+    сервер выставляет при первом запросе. Логина и паролей нет: продукт решает
+    задачу обучения, а не учёта персонала.
+
+    **Проверка действий:** любое присланное действие проверяется заново
+    по состоянию из базы. Знание идентификатора не даёт возможности его
+    выполнить, если оно недоступно в текущем состоянии, заблокировано флагом
+    или требует отсутствующего в вагоне ресурса.
+
+servers:
+  - url: http://localhost:5400
+    description: локальный запуск
+
+tags:
+  - name: Справочники
+  - name: Ситуации
+  - name: Прохождение
+  - name: Итоги
+
+paths:
+  /api/health:
+    get:
+      tags: [Справочники]
+      summary: Состояние сервера
+      responses:
+        "200":
+          description: Сервер жив, указано число загруженных ситуаций
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  scenarios: { type: integer, example: 3 }
+
+  /api/meta:
+    get:
+      tags: [Справочники]
+      summary: Шкалы, компетенции и состояние AI-слоя
+      description: |
+        Возвращает ровно две шкалы и пять компетенций. Поле `ai.enabled`
+        показывает, подключена ли модель; при `false` продукт полностью
+        работоспособен — свободную речь разбирает собственный анализатор.
+      responses:
+        "200":
+          description: Справочник
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  scales:
+                    type: array
+                    items: { $ref: "#/components/schemas/Scale" }
+                  competencies:
+                    type: array
+                    items: { $ref: "#/components/schemas/Competency" }
+                  ai: { $ref: "#/components/schemas/AiStatus" }
+
+  /api/scenarios:
+    get:
+      tags: [Ситуации]
+      summary: Список ситуаций
+      responses:
+        "200":
+          description: Карточки ситуаций с контекстом и номером в банке
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  scenarios:
+                    type: array
+                    items: { $ref: "#/components/schemas/ScenarioCard" }
+
+  /api/scenarios/{id}:
+    get:
+      tags: [Ситуации]
+      summary: Паспорт ситуации без графа
+      description: |
+        Контекст, доступные ресурсы, ограничения и источник — включая
+        разделение `normative_rule` (следует из источника) и
+        `gameplay_interpretation` (наша игровая разработка).
+        Поля `states` в ответе нет и быть не может.
+      parameters:
+        - $ref: "#/components/parameters/ScenarioId"
+      responses:
+        "200":
+          description: Паспорт
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  scenario: { $ref: "#/components/schemas/ScenarioPassport" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/sessions:
+    post:
+      tags: [Прохождение]
+      summary: Начать прохождение
+      description: |
+        Создаёт сессию и возвращает первый экран. Незакрытое прохождение
+        той же ситуации помечается брошенным. Номер попытки считается
+        автоматически и используется для сравнения в разборе.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scenarioId]
+              properties:
+                scenarioId: { type: string, example: sit-19-medical }
+      responses:
+        "200":
+          description: Первый экран ситуации
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  screen: { $ref: "#/components/schemas/Screen" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/sessions/{id}:
+    get:
+      tags: [Прохождение]
+      summary: Текущий экран
+      description: |
+        Возвращает состояние на момент запроса, включая остаток времени
+        по часам сервера. Безопасно вызывать после перезагрузки страницы.
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: Экран
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  screen: { $ref: "#/components/schemas/Screen" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/sessions/{id}/actions:
+    post:
+      tags: [Прохождение]
+      summary: Выполнить ход
+      description: |
+        Принимает ровно одну форму:
+
+        * `actionId` — выбор действия или эскалация;
+        * `order` — порядок действий для состояния-последовательности;
+        * `timeout: true` — игрок ничего не сделал, время вышло.
+
+        Истечение времени проверяется по часам сервера. Если время ещё есть,
+        `timeout` отклоняется (`not-expired`). Если время уже вышло, обычное
+        действие **не выполняется** — применяется ветка бездействия, и в ответе
+        `lastResult.timedOut = true`.
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [actionId]
+                  properties:
+                    actionId: { type: string, example: a-report }
+                - type: object
+                  required: [order]
+                  properties:
+                    order:
+                      type: array
+                      items: { type: string }
+                      example: [i-announce, i-space, i-note]
+                - type: object
+                  required: [timeout]
+                  properties:
+                    timeout: { type: boolean, example: true }
+      responses:
+        "200":
+          description: Новый экран и то, что произошло
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  finished: { type: boolean }
+                  screen: { $ref: "#/components/schemas/Screen" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Refused" }
+
+  /api/sessions/{id}/message:
+    post:
+      tags: [Прохождение]
+      summary: Свободная реплика
+      description: |
+        Текст разбирается на сервере: нормализация, основы слов, регулярные
+        выражения для очевидных намерений, сопоставление с **разрешёнными
+        в этот момент** действиями и проверка через движок.
+
+        Если подключён AI (`AI_API_KEY`), при неуверенном результате
+        запрашивается кандидат у модели — и этот кандидат проходит ровно те же
+        проверки. Модель не может изменить состояние, создать переход или
+        обойти ограничения.
+
+        Если действие определить не удалось, возвращается `200` с
+        `understood: false` и репликой собеседника: пассажир переспрашивает.
+        Это не ошибка ввода, и ситуация при этом **не сдвигается**.
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  maxLength: 400
+                  example: доложу начальнику поезда и попрошу медиков на станцию
+      responses:
+        "200":
+          description: Реплика понята (возвращается экран) либо пассажир переспрашивает
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      ok: { type: boolean }
+                      finished: { type: boolean }
+                      screen: { $ref: "#/components/schemas/Screen" }
+                  - type: object
+                    properties:
+                      ok: { type: boolean, example: true }
+                      understood: { type: boolean, example: false }
+                      reply:
+                        type: string
+                        example: Не понял, о чём вы. Назовите действие прямо.
+                      said: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Refused" }
+
+  /api/sessions/{id}/finish:
+    post:
+      tags: [Прохождение]
+      summary: Прервать прохождение
+      description: Сессия помечается брошенной. Запись сохраняется — по ней видно, где люди выходят.
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: Прервано
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  status: { type: string, example: abandoned }
+
+  /api/sessions/{id}/debrief:
+    get:
+      tags: [Итоги]
+      summary: Разбор прохождения
+      description: |
+        Доступен только для завершённой сессии. Содержит итог, обе шкалы,
+        ключевые решения с **реальной** альтернативной веткой из сценария,
+        сильные стороны, зоны улучшения, компетенции и полную ленту событий.
+
+        Начиная со второй попытки заполняется `comparison`: разница шкал,
+        смена исхода и список решений, изменённых по сравнению с прошлым разом.
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      responses:
+        "200":
+          description: Разбор
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  attempt: { type: integer }
+                  previousAttempt: { type: integer, nullable: true }
+                  debrief: { $ref: "#/components/schemas/Debrief" }
+                  comparison:
+                    nullable: true
+                    $ref: "#/components/schemas/Comparison"
+        "409":
+          description: Прохождение ещё не завершено
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/progress:
+    get:
+      tags: [Итоги]
+      summary: Прогресс игрока
+      description: |
+        Ситуации с числом попыток и последним исходом, а также компетенции,
+        посчитанные по истории решений во всех завершённых прохождениях.
+        Отдельных тестов на компетенции в продукте нет.
+      responses:
+        "200":
+          description: Прогресс
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  runs: { type: integer }
+                  scenarios:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/ScenarioCard"
+                        - type: object
+                          properties:
+                            attempts: { type: integer }
+                            lastVerdict: { type: string, nullable: true }
+                            lastLoyalty: { type: integer, nullable: true }
+                            lastSafety: { type: integer, nullable: true }
+                            best: { type: string, nullable: true }
+                  competency:
+                    type: array
+                    items: { $ref: "#/components/schemas/CompetencyScore" }
+
+components:
+  parameters:
+    ScenarioId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      example: sit-19-medical
+    SessionId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+      example: s_1a2b3c4d5e6f708192
+
+  responses:
+    NotFound:
+      description: Объект не найден
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Чужая сессия
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Refused:
+      description: |
+        Движок отказал. Это штатный ответ, а не сбой: клиент попросил то,
+        чего в текущем состоянии нельзя.
+
+        Коды: `not-allowed` — действие недоступно; `not-expired` — время ещё
+        не вышло; `finished` — ситуация уже закончена; `no-free-text` — здесь
+        не предусмотрена свободная реплика; `unclear` — реплику не удалось
+        соотнести с действием; `dead-end` — ошибка конфигурации сценария.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        ok: { type: boolean, example: false }
+        code: { type: string, example: not-allowed }
+        error: { type: string, example: "действие «a-report» сейчас недоступно" }
+
+    Scale:
+      type: object
+      properties:
+        id: { type: string, enum: [loyalty, safety] }
+        title: { type: string }
+        short: { type: string }
+        hint: { type: string }
+
+    Competency:
+      type: object
+      properties:
+        id:
+          type: string
+          enum: [safety, communication, deescalation, prioritization, decision]
+        title: { type: string }
+        hint: { type: string }
+
+    CompetencyScore:
+      allOf:
+        - $ref: "#/components/schemas/Competency"
+        - type: object
+          properties:
+            touched:
+              type: boolean
+              description: Проверялась ли компетенция. Непроверенная не показывается как ноль.
+            pct: { type: integer, nullable: true, minimum: 0, maximum: 100 }
+
+    AiStatus:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        provider: { type: string, nullable: true }
+        model: { type: string, nullable: true }
+        note: { type: string }
+
+    ScenarioCard:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        subtitle: { type: string, nullable: true }
+        difficulty: { type: integer, nullable: true }
+        context:
+          type: object
+          properties:
+            trip_stage: { type: string, nullable: true, example: движение }
+            service_class:
+              type: string
+              nullable: true
+              enum: [стандарт, комфорт, бизнес, первый]
+            car: { type: string, nullable: true }
+            location: { type: string, nullable: true }
+            urgency: { type: string, nullable: true }
+        source:
+          type: object
+          properties:
+            document: { type: string, example: Банк «Ситуации на борту» }
+            situation: { type: string, example: "№19 — пассажиру стало плохо" }
+
+    ScenarioPassport:
+      allOf:
+        - $ref: "#/components/schemas/ScenarioCard"
+        - type: object
+          properties:
+            context:
+              type: object
+              properties:
+                safety_risk: { type: string }
+                passenger_profile:
+                  type: object
+                  properties:
+                    who: { type: string }
+                    state: { type: string }
+                    mobility: { type: string }
+                constraints:
+                  type: array
+                  items: { type: string }
+                available_resources:
+                  type: array
+                  items: { type: string }
+                  description: |
+                    Что физически есть в вагоне. Действие, требующее
+                    отсутствующего ресурса, игроку не предлагается.
+            source:
+              type: object
+              properties:
+                source_reference:
+                  type: string
+                  description: |
+                    Ссылка на источник. Ссылок на пункты стандартов здесь нет:
+                    полных текстов в материалах проекта нет, см. docs/SOURCES.md.
+                normative_rule:
+                  type: array
+                  items: { type: string }
+                  description: Что прямо следует из источника.
+                gameplay_interpretation:
+                  type: array
+                  items: { type: string }
+                  description: Что является игровой разработкой и нормативом не является.
+                scenario_rationale: { type: string }
+            scales:
+              type: object
+              properties:
+                loyalty: { type: integer }
+                safety: { type: integer }
+
+    Screen:
+      type: object
+      description: Всё, что клиенту положено знать о ситуации прямо сейчас.
+      properties:
+        sessionId: { type: string }
+        attempt: { type: integer }
+        status: { type: string, enum: [active, finished, abandoned] }
+        step: { type: integer }
+        scenario: { $ref: "#/components/schemas/ScenarioCard" }
+        scales:
+          type: object
+          properties:
+            loyalty: { type: integer, minimum: 0, maximum: 100 }
+            safety: { type: integer, minimum: 0, maximum: 100 }
+        state:
+          nullable: true
+          type: object
+          properties:
+            id: { type: string }
+            kind: { type: string, enum: [decision, sequence, final] }
+            zone: { type: string, nullable: true }
+            speaker: { type: string, nullable: true }
+            text: { type: string }
+            info:
+              type: string
+              nullable: true
+              description: Новая информация, которую приносит это состояние.
+            freeText: { type: boolean }
+            rephrased:
+              type: boolean
+              description: Реплика переформулирована AI-слоем. Смысл и факты не изменены.
+            verdict: { type: string, nullable: true, enum: [good, mixed, bad] }
+            summary: { type: string, nullable: true }
+            timer:
+              nullable: true
+              type: object
+              properties:
+                totalSec: { type: integer }
+                remainingMs: { type: integer }
+        actions:
+          type: array
+          description: Только доступные сейчас. Эффектов и переходов здесь нет.
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              label: { type: string }
+              kind: { type: string, enum: [choice, say, sequence, escalate, idle] }
+              note: { type: string, nullable: true }
+        sequence:
+          nullable: true
+          type: object
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string }
+                  label: { type: string }
+        lastResult:
+          nullable: true
+          $ref: "#/components/schemas/Result"
+
+    Result:
+      type: object
+      description: Что произошло от предыдущего хода.
+      properties:
+        actionLabel: { type: string, nullable: true }
+        effects:
+          type: object
+          properties:
+            loyalty: { type: integer }
+            safety: { type: integer }
+        consequence: { type: string, nullable: true }
+        timedOut: { type: boolean }
+        grade: { type: string, nullable: true, enum: [correct, partial, wrong] }
+        correctOrder:
+          type: array
+          nullable: true
+          items: { type: string }
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              note: { type: string }
+              effects: { type: object }
+              delayed:
+                type: boolean
+                description: Последствие решения, принятого несколько шагов назад.
+
+    Debrief:
+      type: object
+      properties:
+        outcome:
+          type: object
+          properties:
+            verdict: { type: string, enum: [good, mixed, bad] }
+            title: { type: string }
+            text: { type: string }
+            summary: { type: string }
+        scales:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              title: { type: string }
+              from: { type: integer }
+              to: { type: integer }
+              delta: { type: integer }
+        decisions:
+          type: array
+          items:
+            type: object
+            properties:
+              step: { type: integer }
+              situation: { type: string }
+              chosen:
+                type: object
+                properties:
+                  label: { type: string }
+                  said: { type: string, nullable: true }
+                  effects: { type: object }
+                  consequence: { type: string, nullable: true }
+                  timedOut: { type: boolean }
+              alternative:
+                nullable: true
+                type: object
+                description: |
+                  Реальная соседняя ветка сценария, доступная игроку в тот
+                  момент. Не оценка «надо было так», а описание того, как
+                  ситуация пошла бы иначе.
+                properties:
+                  label: { type: string }
+                  effects: { type: object }
+                  consequence: { type: string, nullable: true }
+                  outcome_hint: { type: string, nullable: true }
+        strengths:
+          type: array
+          items:
+            type: object
+            properties:
+              text: { type: string }
+              step: { type: integer, nullable: true }
+        improvements:
+          type: array
+          items:
+            type: object
+            properties:
+              text: { type: string }
+              step: { type: integer, nullable: true }
+        competency:
+          type: array
+          items: { $ref: "#/components/schemas/CompetencyScore" }
+        timeline:
+          type: array
+          items:
+            type: object
+            description: Действия и события в том порядке, в каком происходили.
+        steps: { type: integer }
+
+    Comparison:
+      type: object
+      properties:
+        outcomeChanged: { type: boolean }
+        outcomeBefore: { type: string }
+        outcomeAfter: { type: string }
+        scales:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              short: { type: string }
+              before: { type: integer }
+              after: { type: integer }
+              delta: { type: integer }
+        changedDecisions:
+          type: array
+          items:
+            type: object
+            properties:
+              step: { type: integer }
+              situation: { type: string }
+              before: { type: string }
+              after: { type: string }
