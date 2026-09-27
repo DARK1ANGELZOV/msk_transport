@@ -52,7 +52,29 @@ export function Home({ name }: { name: string | null }) {
         </div>
 
         <Card className="overflow-hidden">
-          <div className="p-5 sm:p-6 flex flex-col gap-5">
+          {/*
+            Фотография показывает, где происходит ситуация. Тёмная заливка
+            поверх неё держит контраст текста независимо от того, насколько
+            светлым оказался кадр.
+          */}
+          {next.media && (
+            <div className="relative h-36 sm:h-44">
+              <img
+                src={next.media.card}
+                alt={next.media.alt}
+                className="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    'linear-gradient(180deg, rgb(var(--c-card) / .35), rgb(var(--c-card)) 96%)'
+                }}
+              />
+            </div>
+          )}
+          <div className="p-5 sm:p-6 flex flex-col gap-5 relative">
             <div className="flex items-start gap-4">
               <span
                 className="shrink-0 grid place-items-center rounded-lg text-accent"
@@ -150,17 +172,33 @@ function SituationCard({ s, attempts }: { s: ScenarioCard; attempts: number }) {
       onClick={() => go(`/s/${s.id}`)}
     >
       <div
-        className="h-20 flex items-end p-3"
-        style={{
-          background: `linear-gradient(135deg, rgb(${hue} / .28), rgb(var(--c-raised)) 70%)`,
-          borderBottom: '1px solid rgb(var(--c-card-hair))'
-        }}
+        className="relative h-28 flex items-end p-3"
+        style={{ borderBottom: '1px solid rgb(var(--c-card-hair))' }}
       >
-        <span style={{ color: `rgb(${hue})` }}>
-          <IconTarget size={22} />
+        {s.media ? (
+          <img
+            src={s.media.card}
+            alt={s.media.alt}
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div
+            className="absolute inset-0"
+            style={{ background: `linear-gradient(135deg, rgb(${hue} / .28), rgb(var(--c-raised)) 70%)` }}
+          />
+        )}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(180deg, rgb(var(--c-card) / .15), rgb(var(--c-card) / .92) 92%)`
+          }}
+        />
+        <span className="relative" style={{ color: `rgb(${hue})` }}>
+          <IconTarget size={20} />
         </span>
         {s.context.urgency && (
-          <span className="ml-auto label" style={{ color: `rgb(${hue})` }}>
+          <span className="relative ml-auto label" style={{ color: `rgb(${hue})` }}>
             {s.context.urgency}
           </span>
         )}

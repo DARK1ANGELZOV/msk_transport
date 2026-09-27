@@ -37,9 +37,30 @@ export function Login({ onDone }: { onDone: (name: string) => void }) {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col">
+    <div className="min-h-dvh flex flex-col relative">
+      {/*
+        Заставка: высокоскоростной состав на платформе. Единственное
+        изображение во всём продукте, которое стоит ради настроения,
+        а не ради контекста ситуации.
+      */}
+      <div className="absolute inset-x-0 top-0 h-72 sm:h-96 overflow-hidden pointer-events-none">
+        <img
+          src="/situations/hero.jpg"
+          alt=""
+          aria-hidden="true"
+          className="w-full h-full object-cover opacity-35"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(180deg, rgb(var(--c-ground) / .55), rgb(var(--c-ground)) 92%)'
+          }}
+        />
+      </div>
+
       {/* Шапка: логотип и обещание продукта */}
-      <div className="border-b border-hair">
+      <div className="border-b border-hair relative">
         <div className="mx-auto w-full max-w-5xl px-4 py-6 flex flex-col gap-5">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div className="flex flex-col gap-1.5">
@@ -61,7 +82,7 @@ export function Login({ onDone }: { onDone: (name: string) => void }) {
         </div>
       </div>
 
-      <div className="flex-1 grid place-items-center px-4 py-10">
+      <div className="flex-1 grid place-items-center px-4 py-10 relative">
         <Card className="w-full max-w-md p-6 flex flex-col gap-5">
           <div className="flex items-center gap-3">
             <span className="text-accent"><IconTrain size={22} /></span>

@@ -67,7 +67,10 @@ export const scenarioCard = (sc) => ({
   source: {
     document: sc.source?.document,
     situation: sc.source?.situation
-  }
+  },
+  // Изображение задаёт место действия. Что именно происходит,
+  // говорит текст ситуации, а не фотография.
+  media: sc.media ?? null
 })
 
 /** Полный паспорт без графа: контекст, источник, разделение норматива и игры. */

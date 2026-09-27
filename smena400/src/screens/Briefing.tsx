@@ -50,10 +50,32 @@ export function Briefing({ scenarioId }: { scenarioId: string }) {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 flex flex-col gap-7">
-      <header className="flex flex-col gap-2">
-        <Label>Ввод в ситуацию</Label>
-        <h1 className="text-2xl font-bold leading-tight">{sc.title}</h1>
-        {sc.subtitle && <p className="text-muted">{sc.subtitle}</p>}
+      {/*
+        Фотография отвечает на вопрос «где я», прежде чем текст ответит
+        на вопрос «что происходит». Именно за этим она здесь и стоит.
+      */}
+      <header className="flex flex-col gap-4">
+        {sc.media && (
+          <div className="relative h-44 sm:h-56 overflow-hidden" style={{ borderRadius: 10 }}>
+            <img
+              src={sc.media.card}
+              alt={sc.media.alt}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(180deg, rgb(var(--c-ground) / .25), rgb(var(--c-ground) / .92) 94%)'
+              }}
+            />
+          </div>
+        )}
+        <div className="flex flex-col gap-2">
+          <Label>Ввод в ситуацию</Label>
+          <h1 className="text-2xl font-bold leading-tight">{sc.title}</h1>
+          {sc.subtitle && <p className="text-muted">{sc.subtitle}</p>}
+        </div>
       </header>
 
       <Card className="p-4 flex flex-col gap-4">

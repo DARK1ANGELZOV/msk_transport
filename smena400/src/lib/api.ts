@@ -35,6 +35,7 @@ export interface ScenarioCard {
     urgency: string | null
   }
   source: { document: string; situation: string }
+  media: { card: string; alt: string } | null
 }
 
 export interface Me {
