@@ -279,7 +279,14 @@ export function step(scenario, session, input = {}, { now = Date.now() } = {}) {
     return fail('not-expired', 'время ещё не истекло')
   }
 
-  if (state.kind === 'sequence') return sequence(scenario, session, input, now)
+  if (state.kind === 'sequence') {
+    // Сюда можно попасть, отправив реплику на состояние, где нужен порядок
+    // действий. Отвечаем по-человечески, а не «не передан порядок».
+    if (typeof input.said === 'string') {
+      return fail('no-free-text', 'здесь нужно расставить действия по порядку')
+    }
+    return sequence(scenario, session, input, now)
+  }
 
   // Свободная реплика: разбираем здесь, потому что решение о том, какое
   // действие имелось в виду, — часть игровой логики, а не интерфейса.
@@ -313,10 +320,17 @@ export function step(scenario, session, input = {}, { now = Date.now() } = {}) {
   const action = findAction(scenario, session, actionId)
   if (!action) return fail('not-allowed', `действие «${actionId}» не найдено`)
 
+  /*
+   * Реплика, разобранная запасным путём (моделью), приходит сюда уже вместе
+   * с идентификатором действия. Сохраняем и текст, и пометку о том, каким
+   * путём он распознан: в разборе должно быть видно и что человек сказал,
+   * и на каком основании это было засчитано.
+   */
+  const viaAi = input.via === 'ai' && typeof input.said === 'string'
   return commit(scenario, session, action, {
     now,
-    said: intent?.said ?? null,
-    intent,
+    said: intent?.said ?? (viaAi ? String(input.said).slice(0, 400) : null),
+    intent: intent ?? (viaAi ? { reason: 'ok', via: 'ai', scores: [] } : null),
     timedOut: false
   })
 }
