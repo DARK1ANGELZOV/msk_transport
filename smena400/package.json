@@ -16,6 +16,7 @@
     "validate": "node tools/validate.mjs",
     "test": "node --test tests/*.test.js",
     "test:api": "node tests/api.e2e.mjs",
+    "test:browser": "node tests/browser.mjs",
     "check": "npm run validate && npm test && npm run typecheck"
   },
   "dependencies": {
