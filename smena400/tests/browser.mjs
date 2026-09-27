@@ -79,7 +79,7 @@ const advance = (last = false) =>
   page.evaluate((useLast) => {
     // Экран последствия — отдельный шаг: сначала «Дальше».
     const next = [...document.querySelectorAll('button')]
-      .find((x) => ['дальше', 'к результату'].includes(x.innerText.trim().toLowerCase()))
+      .find((x) => ['продолжить', 'к результату'].includes(x.innerText.trim().toLowerCase()))
     if (next) {
       next.click()
       return 'consequence'
@@ -163,19 +163,18 @@ await wait(900)
 
 const play = await text()
 check(/лояльность/.test(play) && /безопасность/.test(play), 'обе шкалы на экране')
-check(/ с$|\d+ с/m.test(play), 'таймер виден')
+check(/\d{2}:\d{2}/.test(play), 'таймер виден')
 check(/что вы делаете/.test(play), 'действия предложены')
 await shot('03-situation')
 
-const timerBefore = await page.evaluate(() => {
-  const m = document.body.innerText.match(/(\d+) с/)
-  return m ? Number(m[1]) : null
-})
+const readTimer = () =>
+  page.evaluate(() => {
+    const m = document.body.innerText.match(/(\d{2}):(\d{2})/)
+    return m ? Number(m[1]) * 60 + Number(m[2]) : null
+  })
+const timerBefore = await readTimer()
 await wait(2500)
-const timerAfter = await page.evaluate(() => {
-  const m = document.body.innerText.match(/(\d+) с/)
-  return m ? Number(m[1]) : null
-})
+const timerAfter = await readTimer()
 check(timerBefore !== null && timerAfter !== null && timerAfter < timerBefore,
   'таймер действительно идёт', `${timerBefore} → ${timerAfter}`)
 
@@ -186,12 +185,12 @@ await page.evaluate(() => {
 })
 await wait(900)
 const after = await text()
-check(/что произошло|решение не принято вовремя/.test(after),
+check(/решение принято|решение не принято вовремя/.test(after),
   'последствие показано отдельным экраном')
-check(/дальше/.test(after), 'из последствия есть переход дальше')
+check(/продолжить/.test(after), 'из последствия есть переход дальше')
 await shot('04-consequence')
 
-check(await clickText('дальше'), 'переход к следующей ситуации')
+check(await clickText('продолжить'), 'переход к следующей ситуации')
 await wait(700)
 check(/новая информация/.test(await text()), 'ситуация принесла новую информацию')
 
@@ -214,7 +213,7 @@ await page.type('textarea', 'вагон четыре, место 14в, мужч�
 await page.keyboard.press('Enter')
 await wait(1000)
 check(!/переспрашивают/.test(await text()), 'понятная реплика распознана')
-await clickText('дальше')
+await clickText('продолжить')
 await wait(700)
 
 // ------------------------------------------------- последовательность
@@ -228,20 +227,20 @@ await wait(300)
 check(await clickText('выполнить в этом порядке'), 'порядок отправлен')
 await wait(900)
 await shot('06-sequence')
-await clickText('дальше')
+await clickText('продолжить')
 await wait(600)
 
 // --------------------------------------------------------- до финала
 
 let guard = 0
 while (guard++ < 20) {
-  if (/ситуация закрыта|вышла из-под контроля|издержками/.test(await text())) break
+  if (/успешно разрешена|вышла из-под контроля|издержками/.test(await text())) break
   const did = await advance()
   if (!did) break
   await wait(did === 'action' || did === 'submit' ? 800 : 350)
 }
 const finale = await text()
-check(/ситуация закрыта|вышла из-под контроля|издержками/.test(finale), 'ситуация дошла до финала')
+check(/успешно разрешена|вышла из-под контроля|издержками/.test(finale), 'ситуация дошла до финала')
 await shot('07-final')
 
 // ----------------------------------------------------------- разбор
@@ -253,7 +252,7 @@ await wait(900)
 const deb = await text()
 check(/решения, которые определили исход/.test(deb), 'разбор показывает ключевые решения')
 check(/если бы выбрали иначе/.test(deb), 'показана альтернативная ветка')
-check(/что можно иначе/.test(deb), 'разбор говорит, что можно улучшить')
+check(/что можно улучшить/.test(deb), 'разбор говорит, что можно улучшить')
 check(/что проявилось/.test(deb), 'показаны компетенции')
 check(!/правильный ответ/.test(deb), 'разбор не говорит «правильный ответ»')
 await shot('08-debrief')
@@ -279,7 +278,7 @@ check(/попытка 2/.test(await text()), 'возврат открыл нов
 // Другая стратегия: берём последнее действие вместо первого.
 guard = 0
 while (guard++ < 22) {
-  if (/ситуация закрыта|вышла из-под контроля|издержками/.test(await text())) break
+  if (/успешно разрешена|вышла из-под контроля|издержками/.test(await text())) break
   const did = await advance(true)
   if (!did) break
   await wait(did === 'action' || did === 'submit' ? 800 : 350)

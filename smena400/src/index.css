@@ -3,90 +3,54 @@
 @tailwind utilities;
 
 /*
- * Визуальное направление «Смены 400».
+ * Визуальная система «Смены 400» — по промоматериалу продукта.
  *
- * Глубокий синий фон, белые карточки, красный только на времени и риске,
- * голубой на безопасности. Цвет здесь не оформление, а сигнал: если на экране
- * появилось красное, значит, кончается время или растёт риск, и ничего
- * другого красным быть не может.
+ * Глубокий синий фон, тёмные карточки с тонкой рамкой, красный как главный
+ * акцент действия, времени и риска, голубой на безопасности. Крупные цифры
+ * показателей, минимум текста, большие кнопки.
  *
- * Приём, который держит всю тему: `.card` переопределяет токены цвета внутри
- * себя. Одна строка превращает карточку в светлый островок, и все утилиты
- * внутри неё (text-muted, border-hair и прочие) сами становятся тёмными.
- * Благодаря этому компоненты не знают, на каком фоне их поставили.
+ * Правило цвета: красный означает «действуй» или «риск» и больше ничего.
+ * Голубой — безопасность. У каждого показателя свой постоянный цвет,
+ * чтобы их нельзя было перепутать боковым зрением под таймером.
  */
 :root {
-  /* Тёмно-синяя основа */
-  --c-ground: 9 22 43;
-  --c-raised: 14 31 58;
-  --c-sunken: 6 16 32;
-  --c-hair: 28 50 82;
+  /* Фон: от самого тёмного к поднятому */
+  --c-ground: 8 20 38;
+  --c-raised: 17 33 56;
+  --c-sunken: 5 14 28;
+  --c-hair: 32 52 82;
 
-  /* Текст на тёмном */
-  --c-ink: 233 240 248;
-  --c-muted: 148 170 196;
-  --c-faint: 104 128 158;
+  /* Карточка — тёмная, чуть светлее фона */
+  --c-card: 20 38 64;
+  --c-card-hair: 38 60 92;
 
-  /* Белая карточка и текст в ней */
-  --c-card: 255 255 255;
-  --c-card-ink: 12 26 45;
-  --c-card-muted: 88 106 132;
-  --c-card-faint: 136 152 174;
-  --c-card-hair: 223 230 239;
+  /* Текст */
+  --c-ink: 236 243 250;
+  --c-muted: 150 173 200;
+  --c-faint: 104 130 162;
 
-  /* Сигналы */
-  --c-accent: 56 140 255;
-  --c-danger: 226 58 58;
-  --c-warn: 232 160 46;
-  --c-good: 46 178 128;
+  /* Акценты */
+  --c-accent: 232 35 42;      /* красный: действие, время, риск */
+  --c-accent-soft: 255 90 96;
+  --c-blue: 59 167 224;       /* голубой: безопасность */
+  --c-danger: 232 35 42;
+  --c-warn: 240 176 64;
+  --c-good: 54 196 140;
 
   /* Показатели состояния */
-  --c-safety: 56 189 248;
-  --c-loyalty: 245 176 65;
-  --c-order: 125 211 160;
-  --c-trust: 186 156 255;
+  --c-loyalty: 232 85 94;     /* сердце — тёплый красный */
+  --c-safety: 59 167 224;     /* щит — голубой */
+  --c-order: 116 202 160;
+  --c-trust: 168 146 246;
 
   color-scheme: dark;
 }
 
 /*
- * Светлая тема — для дневной учебной комнаты и проектора. Карточки остаются
- * белыми, меняется только фон вокруг и насыщенность сигналов: на светлом
- * ярко-голубой и оранжевый теряют контраст.
+ * Продукт намеренно одноцветный: тренажёр работает в вагоне и в депо,
+ * и приборная тёмная подача читается одинаково при любом освещении.
+ * Светлой темы нет — это решение, а не пропуск.
  */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) {
-    --c-ground: 232 237 244;
-    --c-raised: 255 255 255;
-    --c-sunken: 217 225 236;
-    --c-hair: 199 211 226;
-    --c-ink: 12 26 45;
-    --c-muted: 88 106 132;
-    --c-faint: 132 148 170;
-    --c-accent: 21 96 214;
-    --c-safety: 12 130 184;
-    --c-loyalty: 168 106 12;
-    --c-order: 30 128 82;
-    --c-trust: 108 74 190;
-    color-scheme: light;
-  }
-}
-
-:root[data-theme='light'] {
-  --c-ground: 232 237 244;
-  --c-raised: 255 255 255;
-  --c-sunken: 217 225 236;
-  --c-hair: 199 211 226;
-  --c-ink: 12 26 45;
-  --c-muted: 88 106 132;
-  --c-faint: 132 148 170;
-  --c-accent: 21 96 214;
-  --c-safety: 12 130 184;
-  --c-loyalty: 168 106 12;
-  --c-order: 30 128 82;
-  --c-trust: 108 74 190;
-  color-scheme: light;
-}
 
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
@@ -95,6 +59,9 @@
     @apply bg-ground text-ink font-sans antialiased;
     font-size: 15px;
     line-height: 1.5;
+    background-image:
+      radial-gradient(1200px 600px at 50% -10%, rgb(23 48 86 / .55), transparent 60%);
+    background-attachment: fixed;
   }
 
   h1, h2, h3 { @apply font-display; text-wrap: balance; }
@@ -114,98 +81,133 @@
 }
 
 @layer components {
-  /*
-   * Белая карточка. Внутри переопределяются токены цвета, поэтому вложенные
-   * компоненты автоматически читаются на светлом фоне.
-   */
+  /* Карточка: тёмная, с тонкой рамкой и мягким скруглением. */
   .card {
     background: rgb(var(--c-card));
-    color: rgb(var(--c-card-ink));
-    --c-ink: var(--c-card-ink);
-    --c-muted: var(--c-card-muted);
-    --c-faint: var(--c-card-faint);
-    --c-hair: var(--c-card-hair);
-    --c-raised: 248 250 252;
-    --c-sunken: 240 244 249;
-    --c-accent: 21 96 214;
-    --c-safety: 12 130 184;
-    --c-loyalty: 176 112 14;
-    --c-order: 30 128 82;
-    --c-trust: 108 74 190;
-    border-radius: 4px;
+    border: 1px solid rgb(var(--c-card-hair));
+    border-radius: 10px;
   }
 
-  /* Панель на тёмном фоне — когда карточка была бы лишней. */
-  .panel { @apply bg-raised border border-hair; border-radius: 4px; }
+  /* Панель — то же, но приглушённее: для вторичных блоков. */
+  .panel {
+    background: rgb(var(--c-raised) / .7);
+    border: 1px solid rgb(var(--c-hair));
+    border-radius: 8px;
+  }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
-           border border-hair bg-transparent text-ink text-sm
-           transition-colors select-none;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3
+           text-ink text-sm font-medium transition-all select-none;
+    background: rgb(var(--c-raised));
+    border: 1px solid rgb(var(--c-hair));
+    border-radius: 8px;
     min-height: 44px;
-    border-radius: 3px;
   }
-  .btn:hover:not(:disabled) { @apply border-accent; }
+  .btn:hover:not(:disabled) { border-color: rgb(var(--c-accent) / .6); }
   .btn:disabled { @apply opacity-40 cursor-not-allowed; }
 
+  /* Главная кнопка — красная: это цвет действия. */
   .btn-primary {
-    @apply text-white font-medium;
-    background: rgb(var(--c-accent));
+    @apply text-white font-semibold;
+    background: linear-gradient(180deg, rgb(var(--c-accent-soft)), rgb(var(--c-accent)));
     border-color: rgb(var(--c-accent));
+    box-shadow: 0 6px 18px -8px rgb(var(--c-accent) / .8);
   }
-  .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
 
-  /* Красная кнопка — только там, где действие связано со временем или риском. */
-  .btn-risk {
-    @apply text-white font-medium;
-    background: rgb(var(--c-danger));
-    border-color: rgb(var(--c-danger));
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    @apply text-muted;
   }
-
-  .btn-ghost { @apply bg-transparent border-transparent text-muted; }
-  .btn-ghost:hover:not(:disabled) { @apply text-ink border-hair; }
+  .btn-ghost:hover:not(:disabled) { @apply text-ink; border-color: rgb(var(--c-hair)); }
 
   /*
-   * Действие в ситуации — крупная цель под палец. Это главный интерактив
-   * продукта, и он намеренно больше всего остального на экране.
+   * Действие в ситуации — главный интерактив продукта, и он намеренно
+   * крупнее всего остального на экране.
    */
   .action {
-    @apply w-full text-left px-4 py-4 flex gap-3 items-start transition-colors;
-    background: rgb(var(--c-card));
-    color: rgb(var(--c-card-ink));
-    --c-ink: var(--c-card-ink);
-    --c-muted: var(--c-card-muted);
-    --c-faint: var(--c-card-faint);
-    --c-accent: 21 96 214;
-    border: 1px solid rgb(var(--c-card-hair));
-    border-left: 3px solid rgb(var(--c-card-hair));
-    border-radius: 4px;
-    min-height: 60px;
+    @apply w-full text-left px-4 py-3.5 flex gap-3 items-start transition-all;
+    background: rgb(var(--c-raised));
+    border: 1px solid rgb(var(--c-hair));
+    border-radius: 8px;
+    min-height: 56px;
   }
-  .action:hover:not(:disabled) { border-left-color: rgb(var(--c-accent)); }
+  .action:hover:not(:disabled) {
+    background: rgb(var(--c-card));
+    border-color: rgb(var(--c-accent) / .55);
+    transform: translateX(2px);
+  }
   .action:disabled { @apply opacity-45 cursor-not-allowed; }
-  .action[aria-pressed='true'] { border-left-color: rgb(var(--c-accent)); }
+  .action[aria-pressed='true'] {
+    border-color: rgb(var(--c-accent));
+    background: rgb(var(--c-accent) / .1);
+  }
 
   .input {
-    @apply w-full px-3 py-3 text-ink placeholder:text-faint;
+    @apply w-full px-4 py-3 text-ink placeholder:text-faint;
     background: rgb(var(--c-sunken));
     border: 1px solid rgb(var(--c-hair));
-    border-radius: 3px;
+    border-radius: 8px;
   }
   .input:focus { border-color: rgb(var(--c-accent)); outline: none; }
 
   .label {
-    @apply font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-faint;
+    @apply font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-faint;
   }
 
   .num { @apply font-mono tabular-nums; }
 
+  /* Капсула с иконкой — как в шапке промоматериала. */
   .chip {
-    @apply inline-flex items-center gap-1.5 px-2 py-1 border border-hair
-           font-mono text-[0.6875rem] uppercase tracking-wider text-muted;
-    border-radius: 2px;
+    @apply inline-flex items-center gap-2 px-3 py-1.5 text-xs text-muted;
+    background: rgb(var(--c-raised) / .8);
+    border: 1px solid rgb(var(--c-hair));
+    border-radius: 999px;
   }
 
-  /* Крупный показатель: цифра — главное, подпись — вторична. */
-  .metric { @apply font-mono tabular-nums leading-none; font-size: 2.5rem; }
+  /* Красный бейдж таймера. */
+  .timer-badge {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 font-mono tabular-nums font-semibold;
+    background: rgb(var(--c-accent) / .16);
+    border: 1px solid rgb(var(--c-accent) / .5);
+    color: rgb(var(--c-accent-soft));
+    border-radius: 999px;
+  }
+  .timer-badge[data-urgent='true'] {
+    background: rgb(var(--c-accent) / .28);
+    animation: pulse400 1s ease-in-out infinite;
+  }
+
+  /* Реплика собеседника — пузырь с хвостиком. */
+  .bubble {
+    @apply relative px-5 py-4;
+    background: rgb(var(--c-raised));
+    border: 1px solid rgb(var(--c-hair));
+    border-radius: 12px;
+  }
+  .bubble::after {
+    content: '';
+    position: absolute;
+    left: 28px;
+    bottom: -9px;
+    width: 16px;
+    height: 16px;
+    background: rgb(var(--c-raised));
+    border-right: 1px solid rgb(var(--c-hair));
+    border-bottom: 1px solid rgb(var(--c-hair));
+    transform: rotate(45deg);
+  }
+
+  /* Тонкая полоса показателя. */
+  .meter {
+    @apply h-2 overflow-hidden;
+    background: rgb(var(--c-sunken));
+    border-radius: 999px;
+  }
+  .meter > span {
+    @apply block h-full;
+    border-radius: 999px;
+    transition: width .5s ease;
+  }
 }

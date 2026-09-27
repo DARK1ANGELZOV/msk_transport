@@ -6,7 +6,10 @@ import {
 } from '../lib/api'
 import { go } from '../lib/router'
 import { seconds, sign } from '../lib/format'
-import { Card, CompetencyBar, ErrorNote, Label, Spinner, Verdict } from '../ui/kit'
+import {
+  Card, CompetencyBar, Dynamics, ErrorNote, Gauge, Label, Spinner, Verdict
+} from '../ui/kit'
+import { IconAlert, IconCheck, IconReplay } from '../ui/brand'
 
 /**
  * Разбор.
@@ -93,24 +96,37 @@ export function Debrief({ sessionId }: { sessionId: string }) {
         </p>
       </header>
 
-      {/* ------------------------------------------------------ шкалы */}
-      <section className="grid sm:grid-cols-2 gap-3">
-        {d.scales.map((s) => (
-          <Card key={s.id} className="p-4">
-            <Label>{s.title}</Label>
-            <div className="flex items-baseline gap-3 mt-2">
-              <span className="num text-faint text-lg">{s.from}</span>
-              <span className="text-faint" aria-hidden="true">→</span>
-              <span className={`num text-3xl ${toneOf(s.id)}`}>{s.to}</span>
-              <span
-                className={`num text-sm ${s.delta >= 0 ? 'text-good' : 'text-danger'}`}
-              >
+      {/* ------------------------------------------------- результат */}
+      <Card className="p-5 sm:p-6 flex flex-col gap-6">
+        <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
+          {d.scales.map((s) => (
+            <Gauge key={s.id} meta={s} value={s.to} />
+          ))}
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-6">
+          {d.scales.map((s) => (
+            <span key={s.id} className="text-xs text-muted flex items-center gap-1.5">
+              старт <span className="num text-faint">{s.from}</span>
+              <span aria-hidden="true">→</span>
+              <span className={`num font-semibold ${s.delta >= 0 ? 'text-good' : 'text-danger'}`}>
                 {sign(s.delta)}
               </span>
-            </div>
-          </Card>
-        ))}
-      </section>
+            </span>
+          ))}
+        </div>
+
+        {/*
+          Динамика показывает не итог, а форму: на каком шаге всё пошло вниз.
+          Точки берутся из ленты прохождения, а не пересчитываются заново.
+        */}
+        {series(d).length > 1 && (
+          <div className="border-t border-hair pt-5">
+            <Label className="mb-3">Динамика показателей</Label>
+            <Dynamics meta={d.scales} series={series(d)} />
+          </div>
+        )}
+      </Card>
 
       {data.comparison && (
         <Card className="p-4 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-accent">
@@ -144,11 +160,18 @@ export function Debrief({ sessionId }: { sessionId: string }) {
 
       {/* ------------------------------ что получилось / что улучшить */}
       <section className="grid sm:grid-cols-2 gap-3">
-        <Card className="p-4">
-          <Label className="text-good">Что получилось</Label>
-          <ul className="mt-2 flex flex-col gap-2.5 text-sm list-none p-0">
+        <Card className="p-5">
+          <Label className="text-good flex items-center gap-2">
+            <IconCheck size={13} /> Что получилось хорошо
+          </Label>
+          <ul className="mt-3 flex flex-col gap-3 text-sm list-none p-0">
             {d.strengths.length ? (
-              d.strengths.map((s, i) => <li key={i}>{s.text}</li>)
+              d.strengths.map((x, i) => (
+                <li key={i} className="flex gap-2.5">
+                  <span className="text-good shrink-0 mt-0.5"><IconCheck size={14} /></span>
+                  <span>{x.text}</span>
+                </li>
+              ))
             ) : (
               <li className="text-muted">
                 В этот раз ни одно решение не сыграло в плюс. Это поправимо —
@@ -157,10 +180,18 @@ export function Debrief({ sessionId }: { sessionId: string }) {
             )}
           </ul>
         </Card>
-        <Card className="p-4">
-          <Label className="text-warn">Что можно иначе</Label>
-          <ul className="mt-2 flex flex-col gap-2.5 text-sm list-none p-0">
-            {d.improvements.map((s, i) => <li key={i}>{s.text}</li>)}
+
+        <Card className="p-5">
+          <Label className="text-warn flex items-center gap-2">
+            <IconAlert size={13} /> Что можно улучшить
+          </Label>
+          <ul className="mt-3 flex flex-col gap-3 text-sm list-none p-0">
+            {d.improvements.map((x, i) => (
+              <li key={i} className="flex gap-2.5">
+                <span className="text-warn shrink-0 mt-0.5"><IconAlert size={14} /></span>
+                <span>{x.text}</span>
+              </li>
+            ))}
           </ul>
         </Card>
       </section>
@@ -197,6 +228,7 @@ export function Debrief({ sessionId }: { sessionId: string }) {
         </p>
         <div className="flex flex-wrap gap-3">
           <button className="btn btn-primary" onClick={retry} disabled={again}>
+            <IconReplay size={15} />
             {again ? 'Входим…' : 'Пройти ситуацию заново'}
           </button>
           {data.comparison && (
@@ -210,6 +242,21 @@ export function Debrief({ sessionId }: { sessionId: string }) {
       </section>
     </div>
   )
+}
+
+/**
+ * Точки для графика динамики.
+ *
+ * Берутся из ленты прохождения: каждое записанное событие уже несёт
+ * состояние показателей после себя, пересчитывать нечего.
+ */
+function series(d: Report) {
+  const start = Object.fromEntries(d.scales.map((s) => [s.id, s.from]))
+  const points = [{ step: 0, scales: start }]
+  for (const item of d.timeline) {
+    points.push({ step: item.step, scales: item.scalesAfter })
+  }
+  return points
 }
 
 /**
@@ -262,6 +309,7 @@ function DecisionCard({
 
       {canRewind && (
         <button className="btn self-start" onClick={onRewind} disabled={busy}>
+          <IconReplay size={14} />
           {busy ? 'Возвращаемся…' : 'Вернуться сюда и решить иначе'}
         </button>
       )}

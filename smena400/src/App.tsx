@@ -10,6 +10,7 @@ import { Compare } from './screens/Compare'
 import { Progress } from './screens/Progress'
 import { go, parts, useRoute } from './lib/router'
 import { Spinner } from './ui/kit'
+import { Logo } from './ui/brand'
 
 /**
  * Оболочка приложения.
@@ -44,14 +45,9 @@ export function App() {
     <div className="min-h-dvh flex flex-col">
       {!inSituation && (
         <header className="border-b border-hair">
-          <div className="mx-auto w-full max-w-3xl px-4 py-3 flex items-center justify-between gap-4">
-            <button
-              className="flex items-baseline gap-2 text-left"
-              onClick={() => go('/')}
-              aria-label="К смене"
-            >
-              <span className="font-display font-bold tracking-tight text-lg">СМЕНА</span>
-              <span className="font-display font-bold tracking-tight text-lg text-accent">400</span>
+          <div className="mx-auto w-full max-w-5xl px-4 py-3 flex items-center justify-between gap-4">
+            <button className="text-left" onClick={() => go('/')} aria-label="К смене">
+              <Logo size="sm" />
             </button>
             <nav className="flex items-center gap-1">
               <button

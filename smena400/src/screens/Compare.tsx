@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react'
 import { api, type Comparison, type Debrief as Report } from '../lib/api'
 import { go } from '../lib/router'
 import { sign } from '../lib/format'
-import { Card, ErrorNote, Label, Panel, Spinner, Verdict } from '../ui/kit'
+import { Card, ErrorNote, Label, Panel, Spinner, Verdict, toneVar } from '../ui/kit'
+import { IconReplay, ScaleIcon } from '../ui/brand'
 
 /**
  * Сравнение попыток.
@@ -44,6 +45,8 @@ export function Compare({ sessionId }: { sessionId: string }) {
   }
 
   const c = data.comparison
+  const previous = data.previousAttempt
+  const attempt = data.attempt
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 flex flex-col gap-7">
@@ -51,7 +54,7 @@ export function Compare({ sessionId }: { sessionId: string }) {
         <Label>Сравнение</Label>
         <h1 className="text-2xl font-bold leading-tight">{data.debrief.scenario.title}</h1>
         <p className="text-sm text-muted">
-          Попытка {data.previousAttempt ?? '—'} против попытки {data.attempt}
+          Попытка {previous ?? '—'} против попытки {attempt}
         </p>
       </header>
 
@@ -93,21 +96,49 @@ export function Compare({ sessionId }: { sessionId: string }) {
           </Card>
 
           {/* ----------------------------------------------- показатели */}
-          <section className="grid sm:grid-cols-2 gap-3">
-            {c.scales.map((s) => (
-              <Card key={s.id} className="p-4">
-                <Label>{s.title}</Label>
-                <div className="flex items-baseline gap-3 mt-2">
-                  <span className="num text-faint text-xl">{s.before}</span>
-                  <span className="text-faint" aria-hidden="true">→</span>
-                  <span className="num text-3xl">{s.after}</span>
-                  <span className={`num text-sm ${s.delta >= 0 ? 'text-good' : 'text-danger'}`}>
-                    {sign(s.delta)}
-                  </span>
-                </div>
-              </Card>
-            ))}
-          </section>
+          <Card className="p-5">
+            <Label className="mb-4">Сравнение стратегий</Label>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left">
+                    <th className="pb-3 font-normal"><span className="label">показатель</span></th>
+                    <th className="pb-3 font-normal text-right">
+                      <span className="label">попытка {previous ?? '—'}</span>
+                    </th>
+                    <th className="pb-3 font-normal text-right">
+                      <span className="label">попытка {attempt}</span>
+                    </th>
+                    <th className="pb-3 font-normal text-right"><span className="label">разница</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {c.scales.map((s) => (
+                    <tr key={s.id} className="border-t border-hair">
+                      <td className="py-3">
+                        <span className="flex items-center gap-2">
+                          <span style={{ color: `rgb(${toneVar(s.id)})` }}>
+                            <ScaleIcon id={s.id} size={15} />
+                          </span>
+                          {s.title}
+                        </span>
+                      </td>
+                      <td className="py-3 text-right num text-muted">{s.before}</td>
+                      <td
+                        className="py-3 text-right num font-semibold text-base"
+                        style={{ color: `rgb(${toneVar(s.id)})` }}
+                      >
+                        {s.after}
+                      </td>
+                      <td className={`py-3 text-right num ${s.delta >= 0 ? 'text-good' : 'text-danger'}`}>
+                        {sign(s.delta)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
 
           {/* -------------------------------------- изменённые решения */}
           <section className="flex flex-col gap-3">
@@ -145,7 +176,7 @@ export function Compare({ sessionId }: { sessionId: string }) {
 
       <div className="flex flex-wrap gap-3 border-t border-hair pt-5">
         <button className="btn btn-primary" onClick={() => go(`/debrief/${sessionId}`)}>
-          Разбор этой попытки
+          <IconReplay size={15} /> Разбор этой попытки
         </button>
         <button className="btn" onClick={() => go('/')}>К смене</button>
       </div>
