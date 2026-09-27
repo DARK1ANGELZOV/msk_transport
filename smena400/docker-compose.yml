@@ -1,0 +1,23 @@
+# Запуск стенда одной командой:
+#   docker compose up --build   →  http://localhost:5400
+#
+# AI-слой не нужен: без ключа продукт работает полностью.
+# Чтобы включить, раскомментируйте переменные и передайте свой ключ
+# через окружение — в образ он не попадает.
+services:
+  smena400:
+    build: .
+    ports:
+      - "5400:5400"
+    volumes:
+      - smena400-data:/data
+    environment:
+      PORT: "5400"
+      DB_FILE: /data/smena400.db
+      # AI_PROVIDER: openai
+      # AI_API_KEY: ${AI_API_KEY}
+      # AI_MODEL: gpt-4o-mini
+    restart: unless-stopped
+
+volumes:
+  smena400-data:

@@ -34,6 +34,14 @@ npm run build
 npm start            # http://localhost:5400 — и API, и клиент
 ```
 
+### Через Docker
+
+```bash
+docker compose up --build    # http://localhost:5400
+```
+
+База лежит на томе, поэтому прохождения переживают пересоздание контейнера.
+
 ---
 
 ## Что здесь происходит
@@ -395,6 +403,9 @@ npm run check        # validate + test + typecheck
 
 | Файл | О чём |
 |---|---|
-| [`docs/SOURCES.md`](docs/SOURCES.md) | Карта источников: что подтверждено, чего нет, как выбраны три ситуации |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Архитектура: компоненты, последовательность хода, данные, почему ядро отделено |
+| [`docs/USER-FLOW.md`](docs/USER-FLOW.md) | Пользовательский поток и два разных прохождения одной ситуации |
+| [`docs/SOURCES.md`](docs/SOURCES.md) | Карта источников: что подтверждено и чем |
+| [`docs/LIMITS-ROADMAP.md`](docs/LIMITS-ROADMAP.md) | Ограничения решения и план развития |
 | [`openapi.yaml`](openapi.yaml) | Спецификация API |
-| [`content/situations.json`](content/situations.json) | Инвентаризация банка «Ситуации на борту» |
+| [`content/situations.json`](content/situations.json) | Инвентаризация банка «Ситуации на борту», 51 ситуация |
