@@ -24,7 +24,7 @@
  * а историю прохождения можно воспроизвести шаг за шагом.
  */
 import { classify } from './intent.js'
-import { SCALE_IDS, clamp, emptyCompetency } from './model.js'
+import { clamp, emptyCompetency, scaleIdsOf } from './model.js'
 
 /**
  * Запас на разницу часов и задержку сети.
@@ -51,10 +51,10 @@ export function startSession(scenario, { now = Date.now() } = {}) {
     scenarioId: scenario.id,
     scenarioVersion: scenario.version ?? 1,
     stateId: scenario.entry,
-    scales: {
-      loyalty: clamp(init.loyalty ?? 60),
-      safety: clamp(init.safety ?? 80)
-    },
+    // Показатели заводятся по тому, что объявил сценарий, а не по списку в коде.
+    scales: Object.fromEntries(
+      scaleIdsOf(scenario).map((id) => [id, clamp(init[id] ?? (id === 'safety' ? 80 : 60))])
+    ),
     competency: emptyCompetency(),
     flags: [...(init.flags ?? [])],
     step: 0,
@@ -142,10 +142,15 @@ function findAction(scenario, session, actionId) {
 // Эффекты и переходы
 // ---------------------------------------------------------------------------
 
-/** Изменения шкал строго из конфигурации перехода. Движок ничего не добавляет. */
-function applyEffects(session, effects) {
+/**
+ * Изменения показателей строго из конфигурации перехода.
+ *
+ * Список показателей берётся из сценария: движок не знает наперёд, что это
+ * будет за пара, и одинаково работает с любой объявленной.
+ */
+function applyEffects(session, effects, ids) {
   const applied = {}
-  for (const id of SCALE_IDS) {
+  for (const id of ids) {
     const delta = Number(effects?.[id] ?? 0)
     if (!delta) continue
     const before = session.scales[id]
@@ -200,7 +205,7 @@ function enterState(scenario, session, stateId, now, cause) {
     const set = flags()
     if (ev.when_flag && !set.has(ev.when_flag)) continue
     if (ev.unless_flag && set.has(ev.unless_flag)) continue
-    const applied = applyEffects(next, ev.effects)
+    const applied = applyEffects(next, ev.effects, scaleIdsOf(scenario))
     applyCompetency(next, ev.competency)
     for (const f of ev.set_flags ?? []) if (!next.flags.includes(f)) next.flags.push(f)
     events.push({
@@ -219,7 +224,7 @@ function enterState(scenario, session, stateId, now, cause) {
   const due = next.deferred.filter((d) => isFinal || d.fireAtStep <= next.step)
   next.deferred = next.deferred.filter((d) => !due.includes(d))
   for (const d of due) {
-    const applied = applyEffects(next, d.effects)
+    const applied = applyEffects(next, d.effects, scaleIdsOf(scenario))
     applyCompetency(next, d.competency)
     for (const f of d.set_flags ?? []) if (!next.flags.includes(f)) next.flags.push(f)
     events.push({
@@ -344,7 +349,7 @@ function commit(scenario, session, action, { now, said, intent, timedOut }) {
   // без него нельзя честно сказать «из того, что было доступно».
   const offered = availableActions(scenario, session).map((a) => a.id)
 
-  const applied = applyEffects(next, action.effects)
+  const applied = applyEffects(next, action.effects, scaleIdsOf(scenario))
   applyCompetency(next, action.competency)
 
   for (const f of action.set_flags ?? []) if (!next.flags.includes(f)) next.flags.push(f)

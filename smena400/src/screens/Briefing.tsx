@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { api, type ScenarioPassport } from '../lib/api'
 import { go } from '../lib/router'
-import { Card, ErrorNote, Label, Spinner } from '../ui/kit'
+import { Card, ErrorNote, Label, ScaleBar, Spinner } from '../ui/kit'
 
 /**
  * Ввод в ситуацию.
@@ -40,7 +40,7 @@ export function Briefing({ scenarioId }: { scenarioId: string }) {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-10 flex flex-col gap-4 items-start">
         <ErrorNote>{error}</ErrorNote>
-        <button className="btn" onClick={() => go('/')}>К списку ситуаций</button>
+        <button className="btn" onClick={() => go('/')}>К смене</button>
       </div>
     )
   }
@@ -109,19 +109,24 @@ export function Briefing({ scenarioId }: { scenarioId: string }) {
         </Card>
       </div>
 
-      <Card className="p-4 flex flex-col gap-3">
-        <Label>Две шкалы, и они независимы</Label>
-        <p className="text-sm text-muted max-w-[62ch]">
-          <span className="text-loyalty">Лояльность</span> — отношение пассажира
-          к взаимодействию. <span className="text-safety">Безопасность</span> —
-          соответствие действий требованиям безопасного поведения. Одно и то же
-          решение может поднять одну и опустить другую; именно в этом расхождении
-          и состоит работа.
-        </p>
-        <div className="flex gap-6 text-sm">
-          <span>Старт · <span className="num text-loyalty">{sc.scales.loyalty}</span> лояльность</span>
-          <span>Старт · <span className="num text-safety">{sc.scales.safety}</span> безопасность</span>
+      <Card className="p-4 flex flex-col gap-4">
+        <Label>Что отслеживается в этой ситуации</Label>
+        <div className="flex gap-6">
+          {sc.scaleMeta.map((m) => (
+            <ScaleBar key={m.id} meta={m} value={(sc.scales as Record<string, number>)[m.id] ?? 0} />
+          ))}
         </div>
+        <div className="flex flex-col gap-1.5">
+          {sc.scaleMeta.map((m) => (
+            <p key={m.id} className="text-sm text-muted max-w-[62ch]">
+              <span className="text-ink">{m.title}</span> — {m.hint}.
+            </p>
+          ))}
+        </div>
+        <p className="text-sm text-muted max-w-[62ch]">
+          Показатели независимы: одно и то же решение может поднять один
+          и опустить другой. Именно в этом расхождении и состоит работа.
+        </p>
       </Card>
 
       <Sources sc={sc} />

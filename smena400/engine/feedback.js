@@ -11,7 +11,7 @@
  * действительно пошла бы. Мы ничего не досочиняем — мы показываем соседнее
  * ребро и его последствие.
  */
-import { COMPETENCIES, SCALES, VERDICTS } from './model.js'
+import { COMPETENCIES, VERDICTS, scalesOf } from './model.js'
 
 const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
 
@@ -39,7 +39,7 @@ export function debrief(scenario, session) {
       text: finalState?.text ?? '',
       summary: finalState?.summary ?? ''
     },
-    scales: SCALES.map((s) => {
+    scales: scalesOf(scenario).map((s) => {
       const from = num(start[s.id] ?? (s.id === 'safety' ? 80 : 60))
       const to = num(session.scales[s.id])
       return { id: s.id, title: s.title, short: s.short, from, to, delta: to - from }
@@ -348,10 +348,11 @@ function competencyReport(scenario, session, actions) {
  * игроку, что результат зависел от него.
  */
 export function compareAttempts(previous, current) {
-  const scaleDiff = SCALES.map((s) => {
-    const before = previous.scales.find((x) => x.id === s.id)?.to ?? 0
-    const after = current.scales.find((x) => x.id === s.id)?.to ?? 0
-    return { id: s.id, title: s.title, short: s.short, before, after, delta: after - before }
+  // Сравниваем по показателям той попытки, что разбираем: сценарий мог
+  // объявить свою пару, и брать её из кода было бы неверно.
+  const scaleDiff = current.scales.map((s) => {
+    const before = previous.scales.find((x) => x.id === s.id)?.to ?? s.from
+    return { id: s.id, title: s.title, short: s.short, before, after: s.to, delta: s.to - before }
   })
 
   const prevByStep = new Map(previous.decisions.map((d) => [d.step, d.chosen.label]))

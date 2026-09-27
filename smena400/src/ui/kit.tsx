@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
-import type { ScaleId, Scales } from '../lib/api'
+import type { ScaleMeta, Scales } from '../lib/api'
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`card ${className}`}>{children}</div>
+export function Card({
+  children, className = '', role
+}: { children: ReactNode; className?: string; role?: string }) {
+  return <div className={`card ${className}`} role={role}>{children}</div>
+}
+
+export function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={`panel ${className}`}>{children}</div>
 }
 
 export function Label({ children, className = '' }: { children: ReactNode; className?: string }) {
@@ -28,49 +34,64 @@ export function ErrorNote({ children }: { children: ReactNode }) {
 }
 
 /**
- * Шкала.
+ * Цвет показателя.
  *
- * Обе шкалы нарисованы одинаково по форме и по-разному по цвету: безопасность
- * холодная и техническая, лояльность тёплая. Под таймером человек считывает
- * их боковым зрением, и перепутать их нельзя.
+ * Привязан к идентификатору, а не к порядку на экране: безопасность всегда
+ * голубая, лояльность всегда тёплая, и в любом сценарии они выглядят
+ * одинаково. Переучиваться при переходе между ситуациями не приходится.
+ */
+const TONE: Record<string, { text: string; bg: string }> = {
+  safety: { text: 'text-safety', bg: 'bg-safety' },
+  loyalty: { text: 'text-loyalty', bg: 'bg-loyalty' },
+  order: { text: 'text-order', bg: 'bg-order' },
+  trust: { text: 'text-trust', bg: 'bg-trust' }
+}
+const toneOf = (id: string) => TONE[id] ?? { text: 'text-accent', bg: 'bg-accent' }
+
+/**
+ * Показатель состояния.
  *
- * Изменение показывается отдельной цифрой и держится несколько секунд:
- * само по себе новое значение ничего не говорит, а «−9» говорит всё.
+ * Крупная цифра, тонкая полоса и отдельное изменение рядом. Само по себе
+ * новое значение не говорит ничего — «−9» говорит всё, поэтому изменение
+ * показывается явно и держится до следующего хода.
+ *
+ * Низкое значение окрашивается в красный независимо от показателя: красный
+ * в этом интерфейсе означает риск, и это единственное, что он означает.
  */
 export function ScaleBar({
-  id, title, value, delta = 0, compact = false
+  meta, value, delta = 0, size = 'normal'
 }: {
-  id: ScaleId
-  title: string
+  meta: ScaleMeta
   value: number
   delta?: number
-  compact?: boolean
+  size?: 'normal' | 'big'
 }) {
-  const tone = id === 'safety' ? 'bg-safety' : 'bg-loyalty'
-  const text = id === 'safety' ? 'text-safety' : 'text-loyalty'
+  const tone = toneOf(meta.id)
   const low = value < 35
 
   return (
     <div className="flex-1 min-w-0">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="label truncate">{title}</span>
-        <span className="flex items-baseline gap-1.5">
-          {delta !== 0 && (
-            <span
-              className={`num text-xs ${delta > 0 ? 'text-good' : 'text-danger'} animate-rise`}
-              aria-label={`изменение ${delta > 0 ? 'плюс' : 'минус'} ${Math.abs(delta)}`}
-            >
-              {delta > 0 ? '+' : '−'}{Math.abs(delta)}
-            </span>
-          )}
-          <span className={`num ${compact ? 'text-sm' : 'text-lg'} ${low ? 'text-danger' : text}`}>
-            {value}
+        <span className="label truncate">{meta.short}</span>
+        {delta !== 0 && (
+          <span
+            className={`num text-xs ${delta > 0 ? 'text-good' : 'text-danger'} animate-rise`}
+            aria-label={`изменение ${delta > 0 ? 'плюс' : 'минус'} ${Math.abs(delta)}`}
+          >
+            {delta > 0 ? '+' : '−'}{Math.abs(delta)}
           </span>
-        </span>
+        )}
       </div>
-      <div className="mt-1 h-1.5 bg-sunken border border-hair overflow-hidden">
+      <div
+        className={`num leading-none mt-0.5 ${size === 'big' ? 'text-3xl' : 'text-xl'} ${
+          low ? 'text-danger' : tone.text
+        }`}
+      >
+        {value}
+      </div>
+      <div className="mt-1.5 h-1 bg-sunken overflow-hidden">
         <div
-          className={`h-full ${low ? 'bg-danger' : tone} transition-[width] duration-500`}
+          className={`h-full ${low ? 'bg-danger' : tone.bg} transition-[width] duration-500`}
           style={{ width: `${Math.max(2, value)}%` }}
         />
       </div>
@@ -78,24 +99,26 @@ export function ScaleBar({
   )
 }
 
-/** Обе шкалы рядом: они всегда показываются вместе, порознь смысла нет. */
+/** Показатели сценария рядом: порознь они не читаются. */
 export function ScaleRow({
-  scales, deltas, compact
+  meta, scales, deltas, size
 }: {
+  meta: ScaleMeta[]
   scales: Scales
   deltas?: Partial<Scales>
-  compact?: boolean
+  size?: 'normal' | 'big'
 }) {
   return (
-    <div className="flex gap-5">
-      <ScaleBar
-        id="loyalty" title="Лояльность" value={scales.loyalty}
-        delta={deltas?.loyalty ?? 0} compact={compact}
-      />
-      <ScaleBar
-        id="safety" title="Безопасность" value={scales.safety}
-        delta={deltas?.safety ?? 0} compact={compact}
-      />
+    <div className="flex gap-6">
+      {meta.map((m) => (
+        <ScaleBar
+          key={m.id}
+          meta={m}
+          value={scales[m.id] ?? 0}
+          delta={deltas?.[m.id] ?? 0}
+          size={size}
+        />
+      ))}
     </div>
   )
 }
@@ -103,9 +126,8 @@ export function ScaleRow({
 /**
  * Таймер.
  *
- * Полоса убывает, цифра считает секунды. Когда остаётся меньше трети,
- * цвет меняется: это единственный момент, где интерфейс имеет право
- * подгонять — потому что в реальности время действительно кончается.
+ * Всегда красный: время — это риск, и в этом интерфейсе красный означает
+ * только его. Цифра крупная, полоса убывает слева направо.
  *
  * Отсчёт идёт от значения, полученного с сервера. Клиентские часы здесь
  * только рисуют: решение о том, истекло время или нет, принимает сервер.
@@ -141,13 +163,18 @@ export function Timer({
 
   return (
     <div className="flex items-center gap-3" role="timer" aria-live="off">
-      <div className="flex-1 h-1 bg-sunken overflow-hidden">
+      <span className="label">На решение</span>
+      <div className="flex-1 h-1.5 bg-sunken overflow-hidden">
         <div
-          className={`h-full ${urgent ? 'bg-danger' : 'bg-accent'}`}
-          style={{ width: `${share * 100}%`, transition: 'width .1s linear' }}
+          className="h-full bg-danger"
+          style={{
+            width: `${share * 100}%`,
+            transition: 'width .1s linear',
+            opacity: urgent ? 1 : 0.75
+          }}
         />
       </div>
-      <span className={`num text-sm tabular-nums ${urgent ? 'text-danger' : 'text-muted'}`}>
+      <span className={`num tabular-nums text-danger ${urgent ? 'text-lg' : 'text-sm'}`}>
         {seconds} с
       </span>
     </div>
@@ -162,11 +189,7 @@ export function Verdict({ verdict }: { verdict: 'good' | 'mixed' | 'bad' }) {
     bad: ['border-danger text-danger', 'Вышла из-под контроля']
   } as const
   const [cls, title] = map[verdict]
-  return (
-    <span className={`chip border ${cls}`}>
-      {title}
-    </span>
-  )
+  return <span className={`chip border ${cls}`}>{title}</span>
 }
 
 /** Полоса компетенции. Непроверенная компетенция показывается прочерком. */

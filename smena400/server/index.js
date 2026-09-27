@@ -28,7 +28,7 @@ import path from 'node:path'
 
 import { availableActions, startSession, step } from '../engine/machine.js'
 import { debrief, compareAttempts } from '../engine/feedback.js'
-import { COMPETENCIES, SCALES } from '../engine/model.js'
+import { COMPETENCIES, SCALE_CATALOG, scalesOf } from '../engine/model.js'
 import { INTENT_REASON } from '../engine/intent.js'
 
 import { players, runs } from './lib/db.js'
@@ -84,9 +84,23 @@ const server = http.createServer(async (req, res) => {
     // ------------------------------------------------------------ общее
     if (p === '/api/health') return ok(res, { scenarios: allScenarios().length })
 
+    // Кто играет. Имя хранится ради интерфейса; логина и пароля нет.
+    if (p === '/api/me' && req.method === 'GET') {
+      const me = players.get(playerId)
+      return ok(res, { id: playerId, name: me?.name ?? null })
+    }
+    if (p === '/api/me' && req.method === 'POST') {
+      const body = await readBody(req)
+      const name = String(body.name ?? '').trim().slice(0, 60)
+      if (!name) return bad(res, 'пустое имя', 400)
+      players.rename(playerId, name)
+      return ok(res, { id: playerId, name })
+    }
+
     if (p === '/api/meta') {
       return ok(res, {
-        scales: SCALES,
+        // Справочник показателей: какие именно показывать, решает сценарий.
+        scales: SCALE_CATALOG,
         competencies: COMPETENCIES,
         ai: aiStatus()
       })
@@ -240,8 +254,17 @@ const server = http.createServer(async (req, res) => {
       }
 
       return ok(res, {
+        name: players.get(playerId)?.name ?? null,
         scenarios: byScenario,
         runs: finished.length,
+        history: finished.slice(0, 20).map((r) => ({
+          id: r.id,
+          scenarioId: r.scenarioId,
+          attempt: r.attempt,
+          verdict: r.verdict,
+          scales: { loyalty: r.loyalty, safety: r.safety },
+          finishedAt: r.finishedAt
+        })),
         competency: COMPETENCIES.map((c) => ({
           id: c.id,
           title: c.title,

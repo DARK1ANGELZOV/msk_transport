@@ -13,7 +13,7 @@ import { Card, CompetencyBar, ErrorNote, Label, Spinner } from '../ui/kit'
  * возвращался в ситуацию и пробовал иначе. Поэтому здесь только два вопроса:
  * что вы проходили и что в этих решениях проявилось.
  */
-export function Progress() {
+export function Progress({ name }: { name: string }) {
   const [data, setData] = useState<Data | null>(null)
   const [meta, setMeta] = useState<Meta | null>(null)
   const [error, setError] = useState('')
@@ -37,7 +37,7 @@ export function Progress() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 flex flex-col gap-8">
       <header className="flex flex-col gap-2">
-        <Label>Прогресс</Label>
+        <Label>Профиль · {name}</Label>
         <h1 className="text-2xl font-bold leading-tight">
           {data.runs
             ? `${data.runs} ${plural(data.runs, 'прохождение', 'прохождения', 'прохождений')}`
@@ -103,7 +103,7 @@ export function Progress() {
       </section>
 
       <div>
-        <button className="btn" onClick={() => go('/')}>К списку ситуаций</button>
+        <button className="btn" onClick={() => go('/')}>К смене</button>
       </div>
     </div>
   )

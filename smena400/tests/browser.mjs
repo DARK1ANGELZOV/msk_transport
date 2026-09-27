@@ -77,6 +77,13 @@ const check = (ok, name, detail = '') => {
  */
 const advance = (last = false) =>
   page.evaluate((useLast) => {
+    // Экран последствия — отдельный шаг: сначала «Дальше».
+    const next = [...document.querySelectorAll('button')]
+      .find((x) => ['дальше', 'к результату'].includes(x.innerText.trim().toLowerCase()))
+    if (next) {
+      next.click()
+      return 'consequence'
+    }
     const speech = [...document.querySelectorAll('button')]
       .find((x) => x.innerText.toLowerCase().includes('показать варианты'))
     if (speech) {
@@ -114,9 +121,19 @@ const clickText = (needle) =>
 // ------------------------------------------------------------- список
 
 await page.goto(`${BASE}/#/`, { waitUntil: 'networkidle0' })
-await wait(400)
+await wait(600)
+
+// Вход: имя без пароля.
+check(Boolean(await page.$('input')), 'экран входа показан')
+await page.click('input')
+await page.type('input', 'Проводник Тест', { delay: 5 })
+check(await clickText('заступить на смену'), 'вход по имени')
+await wait(900)
+
 const home = await text()
-check(/пассажиру стало плохо/.test(home), 'список ситуаций открылся')
+check(/смена/.test(home), 'главный экран — смена')
+check(/продолжить смену|заступить на смену/.test(home), 'есть кнопка продолжения смены')
+check(/библиотека ситуаций/.test(home), 'библиотека ситуаций на месте')
 check(/ситуации на борту/.test(home), 'источник виден до входа в ситуацию')
 console.log('Снимки:')
 await shot('01-situations')
@@ -169,9 +186,14 @@ await page.evaluate(() => {
 })
 await wait(900)
 const after = await text()
-check(/что произошло/.test(after), 'показано последствие решения')
-check(/новая информация/.test(after), 'ситуация принесла новую информацию')
+check(/что произошло|решение не принято вовремя/.test(after),
+  'последствие показано отдельным экраном')
+check(/дальше/.test(after), 'из последствия есть переход дальше')
 await shot('04-consequence')
+
+check(await clickText('дальше'), 'переход к следующей ситуации')
+await wait(700)
+check(/новая информация/.test(await text()), 'ситуация принесла новую информацию')
 
 // ------------------------------------------------- свободная реплика
 
@@ -191,7 +213,9 @@ await page.click('textarea')
 await page.type('textarea', 'вагон четыре, место 14в, мужчина без сознания, дыхание есть', { delay: 5 })
 await page.keyboard.press('Enter')
 await wait(1000)
-check(!/переспрашивают/.test(await text()), 'понятная реплика продвинула ситуацию')
+check(!/переспрашивают/.test(await text()), 'понятная реплика распознана')
+await clickText('дальше')
+await wait(700)
 
 // ------------------------------------------------- последовательность
 
@@ -204,6 +228,8 @@ await wait(300)
 check(await clickText('выполнить в этом порядке'), 'порядок отправлен')
 await wait(900)
 await shot('06-sequence')
+await clickText('дальше')
+await wait(600)
 
 // --------------------------------------------------------- до финала
 
@@ -212,7 +238,7 @@ while (guard++ < 20) {
   if (/ситуация закрыта|вышла из-под контроля|издержками/.test(await text())) break
   const did = await advance()
   if (!did) break
-  await wait(did === 'speech' || did === 'sequence' ? 350 : 800)
+  await wait(did === 'action' || did === 'submit' ? 800 : 350)
 }
 const finale = await text()
 check(/ситуация закрыта|вышла из-под контроля|издержками/.test(finale), 'ситуация дошла до финала')
@@ -245,7 +271,7 @@ while (guard++ < 22) {
   if (/ситуация закрыта|вышла из-под контроля|издержками/.test(await text())) break
   const did = await advance(true)
   if (!did) break
-  await wait(did === 'speech' || did === 'sequence' ? 350 : 800)
+  await wait(did === 'action' || did === 'submit' ? 800 : 350)
 }
 check(await clickText('разбор'), 'разбор второй попытки')
 await page.waitForFunction(() => location.hash.includes('/debrief/'), { timeout: 8000 })

@@ -3,60 +3,88 @@
 @tailwind utilities;
 
 /*
- * Тёмная тема — основная: проводник работает с планшетом в вагоне,
- * и приборная подача читается как инструмент, а не как сайт.
- * Светлая включается по системной настройке — для дневной учебной комнаты.
+ * Визуальное направление «Смены 400».
+ *
+ * Глубокий синий фон, белые карточки, красный только на времени и риске,
+ * голубой на безопасности. Цвет здесь не оформление, а сигнал: если на экране
+ * появилось красное, значит, кончается время или растёт риск, и ничего
+ * другого красным быть не может.
+ *
+ * Приём, который держит всю тему: `.card` переопределяет токены цвета внутри
+ * себя. Одна строка превращает карточку в светлый островок, и все утилиты
+ * внутри неё (text-muted, border-hair и прочие) сами становятся тёмными.
+ * Благодаря этому компоненты не знают, на каком фоне их поставили.
  */
 :root {
-  --c-ground: 14 20 24;
-  --c-raised: 22 31 37;
-  --c-sunken: 9 13 16;
-  --c-hair: 36 50 59;
-  --c-ink: 232 238 241;
-  --c-muted: 147 164 174;
-  --c-faint: 104 122 133;
-  --c-accent: 91 140 255;
-  --c-safety: 47 182 124;
-  --c-loyalty: 232 163 61;
-  --c-danger: 226 86 77;
-  --c-warn: 228 178 60;
-  --c-good: 47 182 124;
+  /* Тёмно-синяя основа */
+  --c-ground: 9 22 43;
+  --c-raised: 14 31 58;
+  --c-sunken: 6 16 32;
+  --c-hair: 28 50 82;
+
+  /* Текст на тёмном */
+  --c-ink: 233 240 248;
+  --c-muted: 148 170 196;
+  --c-faint: 104 128 158;
+
+  /* Белая карточка и текст в ней */
+  --c-card: 255 255 255;
+  --c-card-ink: 12 26 45;
+  --c-card-muted: 88 106 132;
+  --c-card-faint: 136 152 174;
+  --c-card-hair: 223 230 239;
+
+  /* Сигналы */
+  --c-accent: 56 140 255;
+  --c-danger: 226 58 58;
+  --c-warn: 232 160 46;
+  --c-good: 46 178 128;
+
+  /* Показатели состояния */
+  --c-safety: 56 189 248;
+  --c-loyalty: 245 176 65;
+  --c-order: 125 211 160;
+  --c-trust: 186 156 255;
+
   color-scheme: dark;
 }
 
+/*
+ * Светлая тема — для дневной учебной комнаты и проектора. Карточки остаются
+ * белыми, меняется только фон вокруг и насыщенность сигналов: на светлом
+ * ярко-голубой и оранжевый теряют контраст.
+ */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
-    --c-ground: 245 247 248;
+    --c-ground: 232 237 244;
     --c-raised: 255 255 255;
-    --c-sunken: 234 238 240;
-    --c-hair: 208 216 221;
-    --c-ink: 18 26 31;
-    --c-muted: 88 102 112;
-    --c-faint: 128 142 151;
-    --c-accent: 30 94 222;
-    --c-safety: 21 134 87;
-    --c-loyalty: 173 106 12;
-    --c-danger: 190 45 37;
-    --c-warn: 160 116 10;
-    --c-good: 21 134 87;
+    --c-sunken: 217 225 236;
+    --c-hair: 199 211 226;
+    --c-ink: 12 26 45;
+    --c-muted: 88 106 132;
+    --c-faint: 132 148 170;
+    --c-accent: 21 96 214;
+    --c-safety: 12 130 184;
+    --c-loyalty: 168 106 12;
+    --c-order: 30 128 82;
+    --c-trust: 108 74 190;
     color-scheme: light;
   }
 }
 
 :root[data-theme='light'] {
-  --c-ground: 245 247 248;
+  --c-ground: 232 237 244;
   --c-raised: 255 255 255;
-  --c-sunken: 234 238 240;
-  --c-hair: 208 216 221;
-  --c-ink: 18 26 31;
-  --c-muted: 88 102 112;
-  --c-faint: 128 142 151;
-  --c-accent: 30 94 222;
-  --c-safety: 21 134 87;
-  --c-loyalty: 173 106 12;
-  --c-danger: 190 45 37;
-  --c-warn: 160 116 10;
-  --c-good: 21 134 87;
+  --c-sunken: 217 225 236;
+  --c-hair: 199 211 226;
+  --c-ink: 12 26 45;
+  --c-muted: 88 106 132;
+  --c-faint: 132 148 170;
+  --c-accent: 21 96 214;
+  --c-safety: 12 130 184;
+  --c-loyalty: 168 106 12;
+  --c-order: 30 128 82;
+  --c-trust: 108 74 190;
   color-scheme: light;
 }
 
@@ -69,7 +97,6 @@
     line-height: 1.5;
   }
 
-  /* Заголовки — узкий гротеск: он держит длинные русские слова в одну строку. */
   h1, h2, h3 { @apply font-display; text-wrap: balance; }
 
   :focus-visible {
@@ -87,39 +114,85 @@
 }
 
 @layer components {
-  .card { @apply bg-raised border border-hair; }
+  /*
+   * Белая карточка. Внутри переопределяются токены цвета, поэтому вложенные
+   * компоненты автоматически читаются на светлом фоне.
+   */
+  .card {
+    background: rgb(var(--c-card));
+    color: rgb(var(--c-card-ink));
+    --c-ink: var(--c-card-ink);
+    --c-muted: var(--c-card-muted);
+    --c-faint: var(--c-card-faint);
+    --c-hair: var(--c-card-hair);
+    --c-raised: 248 250 252;
+    --c-sunken: 240 244 249;
+    --c-accent: 21 96 214;
+    --c-safety: 12 130 184;
+    --c-loyalty: 176 112 14;
+    --c-order: 30 128 82;
+    --c-trust: 108 74 190;
+    border-radius: 4px;
+  }
+
+  /* Панель на тёмном фоне — когда карточка была бы лишней. */
+  .panel { @apply bg-raised border border-hair; border-radius: 4px; }
 
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
-           border border-hair bg-raised text-ink text-sm
+           border border-hair bg-transparent text-ink text-sm
            transition-colors select-none;
     min-height: 44px;
+    border-radius: 3px;
   }
   .btn:hover:not(:disabled) { @apply border-accent; }
   .btn:disabled { @apply opacity-40 cursor-not-allowed; }
 
   .btn-primary {
-    @apply bg-accent text-white border-accent font-medium;
+    @apply text-white font-medium;
+    background: rgb(var(--c-accent));
+    border-color: rgb(var(--c-accent));
   }
-  .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+
+  /* Красная кнопка — только там, где действие связано со временем или риском. */
+  .btn-risk {
+    @apply text-white font-medium;
+    background: rgb(var(--c-danger));
+    border-color: rgb(var(--c-danger));
+  }
 
   .btn-ghost { @apply bg-transparent border-transparent text-muted; }
   .btn-ghost:hover:not(:disabled) { @apply text-ink border-hair; }
 
-  /* Основная кнопка действия в ситуации: крупная цель под палец. */
+  /*
+   * Действие в ситуации — крупная цель под палец. Это главный интерактив
+   * продукта, и он намеренно больше всего остального на экране.
+   */
   .action {
-    @apply w-full text-left px-4 py-3.5 bg-raised border border-hair
-           transition-colors flex gap-3 items-start;
-    min-height: 56px;
+    @apply w-full text-left px-4 py-4 flex gap-3 items-start transition-colors;
+    background: rgb(var(--c-card));
+    color: rgb(var(--c-card-ink));
+    --c-ink: var(--c-card-ink);
+    --c-muted: var(--c-card-muted);
+    --c-faint: var(--c-card-faint);
+    --c-accent: 21 96 214;
+    border: 1px solid rgb(var(--c-card-hair));
+    border-left: 3px solid rgb(var(--c-card-hair));
+    border-radius: 4px;
+    min-height: 60px;
   }
-  .action:hover:not(:disabled) { @apply border-accent bg-sunken; }
+  .action:hover:not(:disabled) { border-left-color: rgb(var(--c-accent)); }
   .action:disabled { @apply opacity-45 cursor-not-allowed; }
+  .action[aria-pressed='true'] { border-left-color: rgb(var(--c-accent)); }
 
   .input {
-    @apply w-full bg-sunken border border-hair px-3 py-2.5 text-ink
-           placeholder:text-faint;
+    @apply w-full px-3 py-3 text-ink placeholder:text-faint;
+    background: rgb(var(--c-sunken));
+    border: 1px solid rgb(var(--c-hair));
+    border-radius: 3px;
   }
-  .input:focus { @apply border-accent outline-none; }
+  .input:focus { border-color: rgb(var(--c-accent)); outline: none; }
 
   .label {
     @apply font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-faint;
@@ -130,5 +203,9 @@
   .chip {
     @apply inline-flex items-center gap-1.5 px-2 py-1 border border-hair
            font-mono text-[0.6875rem] uppercase tracking-wider text-muted;
+    border-radius: 2px;
   }
+
+  /* Крупный показатель: цифра — главное, подпись — вторична. */
+  .metric { @apply font-mono tabular-nums leading-none; font-size: 2.5rem; }
 }

@@ -25,6 +25,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS players (
     id           TEXT PRIMARY KEY,
+    name         TEXT,
     created_at   TEXT NOT NULL,
     last_seen_at TEXT NOT NULL
   );
@@ -79,6 +80,17 @@ export const players = {
     db.prepare('INSERT INTO players (id, created_at, last_seen_at) VALUES (?, ?, ?)')
       .run(id, now(), now())
     return id
+  },
+
+  get: (id) => db.prepare('SELECT id, name FROM players WHERE id = ?').get(id) ?? null,
+
+  /**
+   * Имя нужно интерфейсу, а не системе: человек должен видеть, что смена его.
+   * Пароля нет и не будет — задание прямо запрещает сложную авторизацию,
+   * а тренажёр решает задачу обучения, а не учёта персонала.
+   */
+  rename(id, name) {
+    db.prepare('UPDATE players SET name = ? WHERE id = ?').run(name, id)
   }
 }
 
@@ -117,8 +129,8 @@ export const runs = {
       JSON.stringify(state),
       state.outcome ?? null,
       debrief.outcome.verdict,
-      state.scales.loyalty,
-      state.scales.safety,
+      state.scales.loyalty ?? null,
+      state.scales.safety ?? null,
       JSON.stringify(debrief),
       now(),
       id

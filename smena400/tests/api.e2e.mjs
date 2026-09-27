@@ -89,16 +89,23 @@ if (!up) {
 // ------------------------------------------------------------- проверки
 
 const health = await get('a', '/api/health')
-check(health.data?.scenarios === 3, 'сервер поднялся и загрузил три ситуации',
+check(health.data?.scenarios >= 5, 'сервер поднялся и загрузил банк ситуаций',
   JSON.stringify(health.data))
+const total = health.data.scenarios
+
+// Имени нет до входа; после — сервер его помнит.
+const anon = await get('a', '/api/me')
+check(anon.data?.name === null, 'новый игрок приходит без имени')
+const named = await post('a', '/api/me', { name: 'Проводник Смирнова' })
+check(named.data?.name === 'Проводник Смирнова', 'имя сохраняется')
 
 const meta = await get('a', '/api/meta')
-check(meta.data?.scales?.length === 2, 'шкал ровно две')
+check(meta.data?.scales?.length >= 2, 'справочник показателей отдаётся')
 check(meta.data?.competencies?.length === 5, 'компетенций ровно пять')
 check(meta.data?.ai?.enabled === false, 'без ключа AI выключен, и это штатный режим')
 
 const list = await get('a', '/api/scenarios')
-check(list.data?.scenarios?.length === 3, 'список ситуаций отдаётся')
+check(list.data?.scenarios?.length === total, 'список ситуаций отдаётся')
 check(
   list.data.scenarios.every((s) => s.source?.situation?.includes('№')),
   'в списке у каждой ситуации виден её номер в банке'
@@ -111,6 +118,11 @@ check(passport.data?.scenario?.source?.gameplay_interpretation?.length > 0,
   'паспорт отдаёт игровую интерпретацию отдельно от норматива')
 check(!('states' in (passport.data?.scenario ?? {})),
   'граф сценария клиенту не отдаётся')
+check(
+  Array.isArray(passport.data?.scenario?.scaleMeta) &&
+    passport.data.scenario.scaleMeta.length === 2,
+  'паспорт называет показатели, которые отслеживает эта ситуация'
+)
 
 // ------------------------------------------------------------ прохождение
 
@@ -120,6 +132,10 @@ check(started.status === 200 && s1?.sessionId, 'сессия создана')
 check(s1?.state?.text?.length > 20, 'на экране есть текст ситуации')
 check(s1?.actions?.length >= 3, 'есть из чего выбирать')
 check(s1?.state?.timer?.totalSec === 25, 'таймер передан клиенту')
+check(
+  s1?.scaleMeta?.map((m) => m.id).join() === 'loyalty,safety',
+  'экран сообщает, какие показатели у ситуации'
+)
 check(
   JSON.stringify(s1).includes('f-good') === false,
   'в экране нет ни одного идентификатора будущих состояний'
@@ -257,6 +273,8 @@ check(
 
 const progress = await get('a', '/api/progress')
 check(progress.data?.runs === 2, 'прогресс учёл оба прохождения')
+check(progress.data?.name === 'Проводник Смирнова', 'профиль знает имя')
+check(progress.data?.history?.length === 2, 'в профиле есть история прохождений')
 check(
   progress.data?.scenarios?.find((s) => s.id === 'sit-19-medical')?.attempts === 2,
   'по ситуации видно число попыток'

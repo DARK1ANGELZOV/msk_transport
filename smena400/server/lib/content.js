@@ -16,6 +16,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { availableActions, currentState, remainingMs } from '../../engine/machine.js'
+import { scalesOf } from '../../engine/model.js'
 import { validate } from '../../engine/validate.js'
 
 const DIR = process.env.CONTENT_DIR || 'content/scenarios'
@@ -74,6 +75,7 @@ export const scenarioPassport = (sc) => ({
   ...scenarioCard(sc),
   context: sc.context,
   source: sc.source,
+  scaleMeta: scalesOf(sc),
   scales: sc.initial_state
 })
 
@@ -98,7 +100,10 @@ export function screen(sc, run, { now = Date.now(), lastResult = null } = {}) {
     status: session.status,
     scenario: scenarioCard(sc),
     step: session.step,
+    // Значения и их описание идут вместе: клиент не знает наперёд,
+    // какие показатели у этой ситуации, и не должен знать.
     scales: { ...session.scales },
+    scaleMeta: scalesOf(sc),
     state: st
       ? {
           id: session.stateId,

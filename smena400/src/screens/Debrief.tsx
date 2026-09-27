@@ -50,7 +50,7 @@ export function Debrief({ sessionId }: { sessionId: string }) {
     return (
       <div className="mx-auto w-full max-w-3xl px-4 py-10 flex flex-col gap-4 items-start">
         <ErrorNote>{error}</ErrorNote>
-        <button className="btn" onClick={() => go('/')}>К списку ситуаций</button>
+        <button className="btn" onClick={() => go('/')}>К смене</button>
       </div>
     )
   }
@@ -81,13 +81,7 @@ export function Debrief({ sessionId }: { sessionId: string }) {
             <div className="flex items-baseline gap-3 mt-2">
               <span className="num text-faint text-lg">{s.from}</span>
               <span className="text-faint" aria-hidden="true">→</span>
-              <span
-                className={`num text-3xl ${
-                  s.id === 'safety' ? 'text-safety' : 'text-loyalty'
-                }`}
-              >
-                {s.to}
-              </span>
+              <span className={`num text-3xl ${toneOf(s.id)}`}>{s.to}</span>
               <span
                 className={`num text-sm ${s.delta >= 0 ? 'text-good' : 'text-danger'}`}
               >
@@ -165,8 +159,8 @@ export function Debrief({ sessionId }: { sessionId: string }) {
           <button className="btn btn-primary" onClick={retry} disabled={again}>
             {again ? 'Входим…' : 'Пройти ещё раз'}
           </button>
-          <button className="btn" onClick={() => go('/')}>К списку ситуаций</button>
-          <button className="btn btn-ghost" onClick={() => go('/progress')}>Прогресс</button>
+          <button className="btn" onClick={() => go('/')}>К смене</button>
+          <button className="btn btn-ghost" onClick={() => go('/progress')}>Профиль</button>
         </div>
       </section>
     </div>
@@ -217,17 +211,34 @@ function DecisionCard({ d }: { d: Decision }) {
   )
 }
 
+/** Цвет показателя совпадает с тем, каким он был на экране ситуации. */
+const TONE: Record<string, string> = {
+  safety: 'text-safety',
+  loyalty: 'text-loyalty',
+  order: 'text-order',
+  trust: 'text-trust'
+}
+const toneOf = (id: string) => TONE[id] ?? 'text-accent'
+
+/** Человеческие подписи показателей: служебных идентификаторов на экране нет. */
+const NAME: Record<string, string> = {
+  safety: 'безопасность',
+  loyalty: 'лояльность',
+  order: 'порядок',
+  trust: 'доверие'
+}
+
 function Effects({ effects }: { effects: Partial<Scales> }) {
-  const items = (['loyalty', 'safety'] as const).filter((k) => effects[k])
+  const items = Object.entries(effects ?? {}).filter(([, v]) => v)
   if (!items.length) return null
   return (
-    <div className="flex gap-3 mt-1.5">
-      {items.map((k) => (
-        <span
-          key={k}
-          className={`num text-xs ${(effects[k] as number) > 0 ? 'text-good' : 'text-danger'}`}
-        >
-          {k === 'loyalty' ? 'лояльность' : 'безопасность'} {sign(effects[k] as number)}
+    <div className="flex flex-wrap gap-4 mt-1.5">
+      {items.map(([k, v]) => (
+        <span key={k} className="flex items-baseline gap-1">
+          <span className={`text-xs ${toneOf(k)}`}>{NAME[k] ?? k}</span>
+          <span className={`num text-xs ${(v as number) > 0 ? 'text-good' : 'text-danger'}`}>
+            {sign(v as number)}
+          </span>
         </span>
       ))}
     </div>

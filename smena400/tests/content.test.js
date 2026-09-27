@@ -16,6 +16,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 import { startSession, availableActions, step, currentState } from '../engine/machine.js'
+import { scaleIdsOf } from '../engine/model.js'
 import { debrief } from '../engine/feedback.js'
 import { validate } from '../engine/validate.js'
 
@@ -74,12 +75,15 @@ test('каждый сценарий назван, пронумерован и п
   }
 })
 
-test('ни один сценарий не ссылается на пункт стандарта', () => {
-  // Полных текстов стандартов в материалах проекта нет (docs/SOURCES.md).
-  // Ссылка на пункт означала бы, что её кто-то придумал.
+test('каждое нормативное правило называет документ, из которого взято', () => {
+  // Полные тексты 974-р, 989-р, 990-р и сам банк ситуаций в материалах есть,
+  // поэтому ссылаться можно и нужно. Правило без источника — утверждение
+  // без основания, а в тренажёре это опаснее отсутствующей функции.
+  const DOCS = /СТО РЖД|974|989|990|Ситуации на борту|банк/i
   for (const sc of all) {
-    const blob = JSON.stringify(sc.source)
-    assert.doesNotMatch(blob, /\bп\.\s*\d|\bпункт\s*\d/i, `${sc.id}: ссылка на пункт стандарта`)
+    for (const [i, rule] of sc.source.normative_rule.entries()) {
+      assert.match(rule, DOCS, `${sc.id}: normative_rule[${i}] без источника`)
+    }
   }
 })
 
@@ -136,10 +140,8 @@ test('в каждом сценарии стратегии расходятся �
       order: (st) => [...st.correct_order].reverse()
     })
     assert.notEqual(best.outcome, worst.outcome, `${sc.id}: разные стратегии дали один финал`)
-    assert.ok(
-      best.scales.safety > worst.scales.safety,
-      `${sc.id}: безопасность не различает стратегии`
-    )
+    const sum = (x) => scaleIdsOf(sc).reduce((n, id) => n + x.scales[id], 0)
+    assert.ok(sum(best) > sum(worst), `${sc.id}: показатели не различают стратегии`)
   }
 })
 
@@ -149,7 +151,7 @@ function bestBy(sc, st, actions, sign) {
   let pick = full[0]
   let score = -Infinity
   for (const a of full) {
-    const v = sign * ((a.effects?.safety ?? 0) + (a.effects?.loyalty ?? 0))
+    const v = sign * scaleIdsOf(sc).reduce((n, id) => n + (a.effects?.[id] ?? 0), 0)
     if (v > score) {
       score = v
       pick = a
@@ -158,19 +160,19 @@ function bestBy(sc, st, actions, sign) {
   return pick.id
 }
 
-test('в каждом сценарии есть решение, которое разводит шкалы в разные стороны', () => {
-  // Две шкалы имеют смысл только там, где они расходятся. Если в сценарии
-  // нет ни одного такого действия, второй шкалы там фактически нет.
+test('в каждом сценарии есть решение, которое разводит показатели в разные стороны', () => {
+  // Два показателя имеют смысл только там, где они расходятся. Если в сценарии
+  // нет ни одного такого действия, второго показателя там фактически нет.
+  // Какая это пара — решает сам сценарий, поэтому берём её из паспорта.
   for (const sc of all) {
+    const [a1, a2] = scaleIdsOf(sc)
     let found = false
     for (const st of Object.values(sc.states)) {
       for (const a of st.actions ?? []) {
-        const l = a.effects?.loyalty ?? 0
-        const s = a.effects?.safety ?? 0
-        if (l * s < 0) found = true
+        if ((a.effects?.[a1] ?? 0) * (a.effects?.[a2] ?? 0) < 0) found = true
       }
     }
-    assert.ok(found, `${sc.id}: нет ни одного решения, где лояльность и безопасность расходятся`)
+    assert.ok(found, `${sc.id}: показатели ${a1} и ${a2} нигде не расходятся`)
   }
 })
 
@@ -235,7 +237,15 @@ const PHRASES = [
 
   ['sit-16-equipment', 's-socket', 'проверю весь блок, не только розетку', 'a-check-block'],
   ['sit-16-equipment', 's-socket', 'предложу пересесть на свободное место', 'a-move'],
-  ['sit-16-equipment', 's-block', 'доложу про весь блок и отдельно про кнопку вызова', 'a-report-full']
+  ['sit-16-equipment', 's-block', 'доложу про весь блок и отдельно про кнопку вызова', 'a-report-full'],
+
+  ['sit-41-unattended', 's-report', 'сообщу по радиосвязи начальнику поезда и птб', 'a-radio'],
+  ['sit-41-unattended', 's-report', 'открою сумку и посмотрю что внутри', 'a-look-inside'],
+  ['sit-41-unattended', 's-crowd', 'попрошу пассажиров не приближаться к предмету', 'a-announce'],
+
+  ['sit-06-intoxicated', 's-notice', 'подойду и попрошу соблюдать спокойствие', 'a-calm-request'],
+  ['sit-06-intoxicated', 's-notice', 'вызову по рации: нужна помощь в шестом вагоне', 'a-radio-neutral'],
+  ['sit-06-intoxicated', 's-notice', 'скажу по рации что у меня пьяный пассажир', 'a-radio-open']
 ]
 
 test('свободные реплики относятся к тем действиям, которые имелись в виду', () => {

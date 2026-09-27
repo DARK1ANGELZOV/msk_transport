@@ -12,12 +12,15 @@
  * мы не видели. Формально это техническая проверка, по сути — защита
  * от того, чтобы тренажёр учил людей выдуманному регламенту.
  */
-import { COMPETENCY_IDS, SCALE_IDS, SERVICE_CLASSES, TRIP_STAGES } from './model.js'
+import {
+  ALL_SCALE_IDS, COMPETENCY_IDS, SERVICE_CLASSES, TRIP_STAGES, scaleIdsOf
+} from './model.js'
 
 const FINAL_VERDICTS = new Set(['good', 'mixed', 'bad'])
 const STATE_KINDS = new Set(['decision', 'sequence', 'final'])
 
 export function validate(scenario) {
+  const scaleIds = scaleIdsOf(scenario)
   const errors = []
   const warnings = []
   const E = (m) => errors.push(m)
@@ -41,17 +44,24 @@ export function validate(scenario) {
   if (!src.scenario_rationale) W('не сказано, зачем эта ситуация нужна в тренажёре')
 
   /*
-   * Полных текстов стандартов в материалах проекта нет — см. docs/SOURCES.md.
-   * Значит, ссылки вида «п. 5.3.2» мы физически не могли проверить, и появиться
-   * они могут только одним способом: их кто-то придумал. Это ошибка, а не стиль.
+   * Цитата из стандарта обязана быть проверяемой.
+   *
+   * Полные тексты 974-р, 989-р и 990-р в материалах проекта есть, поэтому
+   * ссылаться на пункты можно и нужно. Но правило, помеченное как нормативное,
+   * без указания документа — это утверждение без источника, и в тренажёре
+   * для работы с пассажирами оно опаснее отсутствующей функции.
    */
-  const cite = String(src.source_reference ?? '')
-  if (/\bп\.\s*\d|\bпункт\s*\d|\bп\.п\./i.test(cite)) {
-    E('source_reference ссылается на пункт стандарта, хотя полного текста стандарта в материалах нет (docs/SOURCES.md)')
-  }
+  const DOCS = /СТО РЖД|974|989|990|Ситуации на борту|банк/i
 
   const rules = src.normative_rule ?? []
   if (!Array.isArray(rules)) E('normative_rule должен быть списком')
+  for (const [i, rule] of (Array.isArray(rules) ? rules : []).entries()) {
+    if (typeof rule !== 'string' || !rule.trim()) {
+      E(`normative_rule[${i}] пуст`)
+    } else if (!DOCS.test(rule)) {
+      E(`normative_rule[${i}] не называет документ, из которого взято правило`)
+    }
+  }
   if (!Array.isArray(src.gameplay_interpretation)) {
     E('gameplay_interpretation должен быть списком')
   }
@@ -143,10 +153,10 @@ export function validate(scenario) {
         if (!b.next || !ids.has(b.next)) {
           E(`${at}: ветка «${grade}» ведёт в несуществующее состояние «${b.next}»`)
         }
-        checkEffects(b.effects, `${at}, ветка «${grade}»`, E)
+        checkEffects(b.effects, `${at}, ветка «${grade}»`, E, scaleIds)
         checkCompetency(b.competency, `${at}, ветка «${grade}»`, E)
         deferredCount += (b.deferred ?? []).length
-        checkDeferred(b.deferred, `${at}, ветка «${grade}»`, E)
+        checkDeferred(b.deferred, `${at}, ветка «${grade}»`, E, scaleIds)
       }
       continue
     }
@@ -176,9 +186,9 @@ export function validate(scenario) {
         if (!r.flag) E(`${aat}: условный переход без флага`)
       }
 
-      checkEffects(a.effects, aat, E)
+      checkEffects(a.effects, aat, E, scaleIds)
       checkCompetency(a.competency, aat, E)
-      checkDeferred(a.deferred, aat, E)
+      checkDeferred(a.deferred, aat, E, scaleIds)
       deferredCount += (a.deferred ?? []).length
 
       /*
@@ -269,10 +279,16 @@ export function validate(scenario) {
 
 // ---------------------------------------------------------------------------
 
-function checkEffects(effects, at, E) {
+function checkEffects(effects, at, E, ids) {
   for (const [k, v] of Object.entries(effects ?? {})) {
-    if (!SCALE_IDS.includes(k)) E(`${at}: неизвестная шкала «${k}» (есть только ${SCALE_IDS.join(', ')})`)
-    if (typeof v !== 'number') E(`${at}: изменение шкалы «${k}» должно быть числом`)
+    if (!ALL_SCALE_IDS.includes(k)) {
+      E(`${at}: неизвестный показатель «${k}» (справочник: ${ALL_SCALE_IDS.join(', ')})`)
+    } else if (ids && !ids.includes(k)) {
+      // Эффект на показатель, которого сценарий не показывает, невидим игроку:
+      // он меняет исход, но человек не понимает почему.
+      E(`${at}: показатель «${k}» не объявлен в scales этого сценария`)
+    }
+    if (typeof v !== 'number') E(`${at}: изменение показателя «${k}» должно быть числом`)
   }
 }
 
@@ -283,13 +299,13 @@ function checkCompetency(delta, at, E) {
   }
 }
 
-function checkDeferred(list, at, E) {
+function checkDeferred(list, at, E, ids) {
   for (const d of list ?? []) {
     if (typeof d.after_steps !== 'number' || d.after_steps < 1) {
       E(`${at}: отложенное последствие без корректного after_steps`)
     }
     if (!d.note) E(`${at}: отложенное последствие без пояснения — игрок не поймёт, что произошло`)
-    checkEffects(d.effects, `${at}, отложенное последствие`, E)
+    checkEffects(d.effects, `${at}, отложенное последствие`, E, ids)
   }
 }
 

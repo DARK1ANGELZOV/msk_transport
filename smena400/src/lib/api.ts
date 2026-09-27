@@ -7,8 +7,20 @@
  * ограничение реализации, а свойство продукта.
  */
 
-export type ScaleId = 'loyalty' | 'safety'
+/**
+ * Показатели объявляет сценарий, а не клиент. Поэтому здесь не фиксированная
+ * пара, а словарь: какие именно показатели у ситуации, приходит вместе
+ * со значениями в `scaleMeta`.
+ */
+export type ScaleId = string
 export type Scales = Record<ScaleId, number>
+
+export interface ScaleMeta {
+  id: ScaleId
+  title: string
+  short: string
+  hint: string
+}
 
 export interface ScenarioCard {
   id: string
@@ -25,7 +37,13 @@ export interface ScenarioCard {
   source: { document: string; situation: string }
 }
 
+export interface Me {
+  id: string
+  name: string | null
+}
+
 export interface ScenarioPassport extends ScenarioCard {
+  scaleMeta: ScaleMeta[]
   context: ScenarioCard['context'] & {
     safety_risk?: string
     passenger_profile?: { who?: string; state?: string; mobility?: string }
@@ -40,7 +58,7 @@ export interface ScenarioPassport extends ScenarioCard {
     gameplay_interpretation: string[]
     scenario_rationale: string
   }
-  scales: { loyalty: number; safety: number }
+  scales: Scales
 }
 
 export interface ActionView {
@@ -68,6 +86,7 @@ export interface Screen {
   scenario: ScenarioCard
   step: number
   scales: Scales
+  scaleMeta: ScaleMeta[]
   state: {
     id: string
     kind: 'decision' | 'sequence' | 'final'
@@ -113,7 +132,7 @@ export interface Debrief {
     text: string
     summary: string
   }
-  scales: { id: ScaleId; title: string; short: string; from: number; to: number; delta: number }[]
+  scales: (ScaleMeta & { from: number; to: number; delta: number })[]
   timeline: TimelineItem[]
   decisions: Decision[]
   consequences: { note: string; effects: Partial<Scales>; delayed: boolean; causeLabel: string | null }[]
@@ -157,7 +176,7 @@ export type TimelineItem =
     }
 
 export interface Comparison {
-  scales: { id: ScaleId; title: string; short: string; before: number; after: number; delta: number }[]
+  scales: (ScaleMeta & { before: number; after: number; delta: number })[]
   outcomeChanged: boolean
   outcomeBefore: string
   outcomeAfter: string
@@ -165,7 +184,16 @@ export interface Comparison {
 }
 
 export interface Progress {
+  name: string | null
   runs: number
+  history: {
+    id: string
+    scenarioId: string
+    attempt: number
+    verdict: string
+    scales: Scales
+    finishedAt: string
+  }[]
   scenarios: (ScenarioCard & {
     attempts: number
     lastVerdict: string | null
@@ -177,7 +205,7 @@ export interface Progress {
 }
 
 export interface Meta {
-  scales: { id: ScaleId; title: string; short: string; hint: string }[]
+  scales: ScaleMeta[]
   competencies: { id: string; title: string; hint: string }[]
   ai: { enabled: boolean; provider: string | null; model: string | null; note: string }
 }
@@ -216,6 +244,8 @@ const post = <T>(url: string, body?: unknown) =>
 
 export const api = {
   meta: () => call<Meta>('/api/meta'),
+  me: () => call<Me>('/api/me'),
+  setName: (name: string) => post<Me>('/api/me', { name }),
   scenarios: () => call<{ scenarios: ScenarioCard[] }>('/api/scenarios'),
   scenario: (id: string) => call<{ scenario: ScenarioPassport }>(`/api/scenarios/${id}`),
   progress: () => call<Progress>('/api/progress'),
