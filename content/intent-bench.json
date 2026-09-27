@@ -1,0 +1,569 @@
+{
+  "note": "Контрольный набор реплик для распознавателя свободной речи. Пополняется методистом: каждая фраза — то, как проводник действительно сказал бы это вслух, а не пересказ варианта из графа. expect: null — реплика, на которую тренажёр обязан переспросить, а не угадать.",
+  "cases": [
+    {
+      "scenario": "med-01",
+      "node": "n-start",
+      "said": "доложу по связи: вагон четыре, медицинский инцидент",
+      "expect": "c-call"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-start",
+      "said": "нажму кнопку связи и вызову медиков на станцию",
+      "expect": "c-call"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-start",
+      "said": "сообщу начальнику поезда, нужна скорая",
+      "expect": "c-call"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-start",
+      "said": "запрошу медицинскую бригаду к ближайшей остановке",
+      "expect": "c-call"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-start",
+      "said": "подойду и проверю пульс и дыхание",
+      "expect": "c-look"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-start",
+      "said": "сначала сама посмотрю, что с ним",
+      "expect": "c-look"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-start",
+      "said": "иду к пассажиру, надо его осмотреть",
+      "expect": "c-look"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-start",
+      "said": "попрошу её говорить тише, чтобы не пугать вагон",
+      "expect": "c-calm"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-start",
+      "said": "успокою пассажирку, пусть не кричит",
+      "expect": "c-calm"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-late-start",
+      "said": "срочно доложу по связи начальнику поезда",
+      "expect": "c-call-late"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-late-start",
+      "said": "иду к нему",
+      "expect": "c-look-late"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-look",
+      "said": "доложу по связи и запрошу медиков на ближайшую остановку",
+      "expect": "c-call2"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-look",
+      "said": "перенесём его в тамбур, там просторнее",
+      "expect": "c-carry"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-look",
+      "said": "попробую вынести его из салона",
+      "expect": "c-carry"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-look",
+      "said": "уложу набок и расстегну ворот, нужен воздух",
+      "expect": "c-aid-here"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-look",
+      "said": "окажу первую помощь прямо на месте",
+      "expect": "c-aid-here"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-calm",
+      "said": "извинюсь и сразу доложу по связи",
+      "expect": "c-recover"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-calm",
+      "said": "молча пойду к пассажиру",
+      "expect": "c-then-look"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-doctor",
+      "said": "объявлю по составу, нет ли среди пассажиров врача",
+      "expect": "c-announce"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-doctor",
+      "said": "сделаю объявление, ищем медработника",
+      "expect": "c-announce"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-doctor",
+      "said": "сама окажу первую помощь по аптечке",
+      "expect": "c-self"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-doctor",
+      "said": "дождусь указаний начальника поезда",
+      "expect": "c-wait"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-self-aid",
+      "said": "поверну набок и расстегну ворот",
+      "expect": "c-recovery-position"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-self-aid",
+      "said": "дам воды и нашатырь, чтобы привести в чувство",
+      "expect": "c-water"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-no-doctor",
+      "said": "всё равно доложу по связи: вагон, ряд, состояние",
+      "expect": "c-report-anyway"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-no-doctor",
+      "said": "подожду ещё, может придёт в себя",
+      "expect": "c-wait-more"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-window",
+      "said": "попрошу начальника поезда о внеплановой остановке по медицинским показаниям",
+      "expect": "c-unscheduled"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-window",
+      "said": "нужна экстренная остановка, человеку плохо",
+      "expect": "c-unscheduled"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-window",
+      "said": "закажу медиков на следующую станцию",
+      "expect": "c-next-stop"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-window",
+      "said": "останусь рядом и дождусь прибытия",
+      "expect": "c-nothing"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-start",
+      "said": "выслушаю обоих и сверю посадочные купоны",
+      "expect": "c-listen"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-start",
+      "said": "посмотрю билеты у обоих и разберусь",
+      "expect": "c-listen"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-start",
+      "said": "попрошу второго пассажира пересесть",
+      "expect": "c-side"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-start",
+      "said": "зачитаю правила размещения",
+      "expect": "c-rules"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-rules",
+      "said": "вернусь и всё-таки сверю купоны",
+      "expect": "c-then-listen"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-rules",
+      "said": "настою: место закреплено за тем, кто уже сидит",
+      "expect": "c-firm"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-both",
+      "said": "признаю сбой и предложу место в пятом вагоне с напитком",
+      "expect": "c-solution"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-both",
+      "said": "скажу честно: ошибка системы, есть свободное место в вагоне пять",
+      "expect": "c-solution"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-both",
+      "said": "объясню, что это ошибка системы и от меня ничего не зависит",
+      "expect": "c-blame"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-escalate",
+      "said": "обращусь ко всему вагону и объясню причину сбоя",
+      "expect": "c-apologize-loud"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-escalate",
+      "said": "вызову начальника поезда",
+      "expect": "c-call-lnp"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-escalate",
+      "said": "попрошу всех успокоиться и не мешать другим",
+      "expect": "c-quiet"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-lnp",
+      "said": "двойная продажа места двенадцать а, купоны проверены, нужна отметка",
+      "expect": "c-report-full"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-lnp",
+      "said": "тут пассажиры ругаются из-за места, разберитесь",
+      "expect": "c-report-vague"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-offer",
+      "said": "предложу два варианта на выбор",
+      "expect": "c-choice-frame"
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-offer",
+      "said": "пересядьте, пожалуйста, в пятый вагон",
+      "expect": "c-order"
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-start",
+      "said": "ну как-то так",
+      "expect": null
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-start",
+      "said": "не знаю что делать",
+      "expect": null
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-start",
+      "said": "сделаю что-нибудь",
+      "expect": null
+    },
+    {
+      "scenario": "med-01",
+      "node": "n-doctor",
+      "said": "посмотрим по ситуации",
+      "expect": null
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-start",
+      "said": "ладно, разберёмся как-нибудь",
+      "expect": null
+    },
+    {
+      "scenario": "con-01",
+      "node": "n-both",
+      "said": "ну это вообще не ко мне",
+      "expect": null
+    },
+    {
+      "scenario": "alg-01",
+      "node": "n-start",
+      "said": "спрошу, есть ли у него с собой автоинъектор",
+      "expect": "c-ask-epi"
+    },
+    {
+      "scenario": "alg-01",
+      "node": "n-start",
+      "said": "принесу воды, пусть прополощет рот",
+      "expect": "c-water"
+    },
+    {
+      "scenario": "alg-01",
+      "node": "n-start",
+      "said": "пойду посмотрю состав блюда на упаковке",
+      "expect": "c-composition"
+    },
+    {
+      "scenario": "alg-01",
+      "node": "n-worse",
+      "said": "достану его автоинъектор, объявлю про медика и доложу — всё сразу",
+      "expect": "c-all-in"
+    },
+    {
+      "scenario": "alg-01",
+      "node": "n-worse",
+      "said": "подожду медика, который откликнется",
+      "expect": "c-wait-help"
+    },
+    {
+      "scenario": "brk-01",
+      "node": "n-start",
+      "said": "встану в проходе с фонарём, чтобы меня видел весь вагон",
+      "expect": "c-stand"
+    },
+    {
+      "scenario": "brk-01",
+      "node": "n-start",
+      "said": "посмотрю в телефоне, что случилось",
+      "expect": "c-check-phone"
+    },
+    {
+      "scenario": "brk-01",
+      "node": "n-start",
+      "said": "останусь на месте, без команды ничего не предпринимаю",
+      "expect": "c-sit"
+    },
+    {
+      "scenario": "brk-01",
+      "node": "n-vestibule",
+      "said": "встану между ним и дверью: по соседнему пути идут составы, выходить смертельно опасно",
+      "expect": "c-stop-firm"
+    },
+    {
+      "scenario": "brk-01",
+      "node": "n-danger",
+      "said": "перекрою проход собой и громко объявлю, что двери не открывать",
+      "expect": "c-block"
+    },
+    {
+      "scenario": "brk-01",
+      "node": "n-report",
+      "said": "доложу подробно: пострадавших нет, тамбур под контролем, была попытка открывания",
+      "expect": "c-full"
+    },
+    {
+      "scenario": "brk-01",
+      "node": "n-panic",
+      "said": "дам громкое объявление на весь вагон: кто я и что происходит",
+      "expect": "c-loud"
+    },
+    {
+      "scenario": "clm-01",
+      "node": "n-start",
+      "said": "доложу о неисправности и сразу объявлю вагону, что причина известна",
+      "expect": "c-report-announce"
+    },
+    {
+      "scenario": "clm-01",
+      "node": "n-start",
+      "said": "объясню, что окна на такой скорости не открываются",
+      "expect": "c-windows"
+    },
+    {
+      "scenario": "clm-01",
+      "node": "n-boil",
+      "said": "сначала к женщине с ребёнком, потом объявление",
+      "expect": "c-now"
+    },
+    {
+      "scenario": "cnx-01",
+      "node": "n-start",
+      "said": "сейчас уточню точное время прибытия и посчитаем вместе",
+      "expect": "c-facts"
+    },
+    {
+      "scenario": "cnx-01",
+      "node": "n-start",
+      "said": "не переживайте, обычно нагоняем",
+      "expect": "c-calm-empty"
+    },
+    {
+      "scenario": "cnx-01",
+      "node": "n-facts",
+      "said": "назову точное время и честно скажу, что запас около сорока минут",
+      "expect": "c-honest"
+    },
+    {
+      "scenario": "cnx-01",
+      "node": "n-anxious",
+      "said": "признаю неточность и предложу план пересадки",
+      "expect": "c-fix"
+    },
+    {
+      "scenario": "doc-01",
+      "node": "n-start",
+      "said": "предложу спокойно поискать вместе: карманы, кресло, пол",
+      "expect": "c-slow-search"
+    },
+    {
+      "scenario": "doc-01",
+      "node": "n-check",
+      "said": "подскажу найти поездку в приложении такси и написать водителю",
+      "expect": "c-taxi"
+    },
+    {
+      "scenario": "doc-01",
+      "node": "n-panic",
+      "said": "снижу голос, соглашусь, что ситуация паршивая, и предложу поискать вместе",
+      "expect": "c-back-to-search"
+    },
+    {
+      "scenario": "drk-01",
+      "node": "n-start",
+      "said": "подойду сбоку негромко и позову на пару слов в тамбур",
+      "expect": "c-aside"
+    },
+    {
+      "scenario": "drk-01",
+      "node": "n-start",
+      "said": "сразу вызову наряд транспортной полиции",
+      "expect": "c-police"
+    },
+    {
+      "scenario": "drk-01",
+      "node": "n-escalate",
+      "said": "сделаю шаг назад и снижу голос, чтобы не спорить",
+      "expect": "c-step-back"
+    },
+    {
+      "scenario": "kid-01",
+      "node": "n-start",
+      "said": "сяду рядом на уровень её глаз и спрошу, как её зовут",
+      "expect": "c-sit"
+    },
+    {
+      "scenario": "kid-01",
+      "node": "n-start",
+      "said": "дам объявление по составу, что потерялся ребёнок",
+      "expect": "c-announce"
+    },
+    {
+      "scenario": "kid-01",
+      "node": "n-calm",
+      "said": "расспрошу, что она помнит: цвет чемодана, кто с ней ехал",
+      "expect": "c-details"
+    },
+    {
+      "scenario": "kid-01",
+      "node": "n-panic",
+      "said": "спокойно объясню вагону и передам приметы по связи",
+      "expect": "c-recover"
+    },
+    {
+      "scenario": "lng-01",
+      "node": "n-start",
+      "said": "покажу жестом минуту и достану телефон с переводчиком",
+      "expect": "c-slow"
+    },
+    {
+      "scenario": "lng-01",
+      "node": "n-start",
+      "said": "поищу по вагону того, кто говорит по-китайски",
+      "expect": "c-find-help"
+    },
+    {
+      "scenario": "lng-01",
+      "node": "n-solve",
+      "said": "покажу розетку у кресла и дам переходник",
+      "expect": "c-power"
+    },
+    {
+      "scenario": "smk-01",
+      "node": "n-start",
+      "said": "сначала доложу начальнику поезда, потом пойду",
+      "expect": "c-report-first"
+    },
+    {
+      "scenario": "smk-01",
+      "node": "n-start",
+      "said": "сразу иду в тамбур проверять",
+      "expect": "c-go"
+    },
+    {
+      "scenario": "smk-01",
+      "node": "n-late",
+      "said": "возьму огнетушитель, выведу людей из тамбура и доложу",
+      "expect": "c-now"
+    },
+    {
+      "scenario": "zon-01",
+      "node": "n-start",
+      "said": "твёрдо откажу и предложу взамен показать вагон-бистро",
+      "expect": "c-no-plus"
+    },
+    {
+      "scenario": "zon-01",
+      "node": "n-press",
+      "said": "отвечу в камеру: скрывать нечего, там электрооборудование под напряжением",
+      "expect": "c-open-answer"
+    },
+    {
+      "scenario": "zon-01",
+      "node": "n-press",
+      "said": "вызову начальника поезда",
+      "expect": "c-lnp"
+    },
+    {
+      "scenario": "zon-01",
+      "node": "n-close",
+      "said": "про обучение отправлю в пресс-службу, а про розетки расскажу сама",
+      "expect": "c-polite-limit"
+    },
+    {
+      "scenario": "brk-01",
+      "node": "n-start",
+      "said": "да ладно, посмотрим",
+      "expect": null
+    },
+    {
+      "scenario": "drk-01",
+      "node": "n-start",
+      "said": "ну тут как обычно",
+      "expect": null
+    },
+    {
+      "scenario": "kid-01",
+      "node": "n-start",
+      "said": "надо что-то придумать",
+      "expect": null
+    }
+  ]
+}

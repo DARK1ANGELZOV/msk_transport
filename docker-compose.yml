@@ -1,0 +1,23 @@
+# Разворачивание одной командой:
+#
+#   docker compose up --build
+#   docker compose exec app node tools/seed.mjs      # демонстрационные данные
+#
+# После этого приложение доступно на http://localhost:8787
+services:
+  app:
+    build: .
+    ports:
+      - '${PORT:-8787}:8787'
+    environment:
+      # Пусто — админских учёток нет, и это правильно: пароля по умолчанию
+      # в системе не существует. Демонстрационные учётки создаёт tools/seed.mjs.
+      DATA_DIR: /data
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-}
+      SEED_PASSWORD: ${SEED_PASSWORD:-}
+    volumes:
+      - data:/data
+    restart: unless-stopped
+
+volumes:
+  data:

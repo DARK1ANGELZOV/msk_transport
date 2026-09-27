@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Палитра. Светлая тема определена полностью на :root, тёмная переопределяет
+ * только токены. Ни один компонент не знает, какая тема активна.
+ *
+ * Нейтральный ряд смещён в холодный сине-зелёный: сталь, зима, платформа.
+ * Акцент один — сигнальный янтарный. Красный оставлен семантике опасности,
+ * поэтому он не может быть акцентом: иначе «опасно» и «нажми сюда»
+ * выглядели бы одинаково.
+ *
+ * Самый бледный тон (--c-faint) подобран так, чтобы мелкие подписи держали
+ * контраст 4.5:1 в обеих темах: он используется для строчного текста
+ * размером 0.68rem, а не только для декора.
+ */
+:root {
+  --c-ground: 238 241 240;
+  --c-surface: 255 255 255;
+  --c-raised: 228 233 231;
+  --c-line: 197 206 204;
+  --c-hair: 221 227 225;
+  --c-ink: 18 26 29;
+  --c-muted: 67 81 79;
+  --c-faint: 92 104 102;
+  --c-accent: 150 95 8;
+  --c-accent-soft: 251 240 218;
+  --c-danger: 176 50 42;
+  --c-good: 32 100 70;
+  --c-warn: 168 108 10;
+}
+
+html[data-theme='dark'] {
+  --c-ground: 14 21 24;
+  --c-surface: 22 31 35;
+  --c-raised: 30 42 47;
+  --c-line: 44 58 63;
+  --c-hair: 34 48 53;
+  --c-ink: 227 233 231;
+  --c-muted: 167 179 177;
+  --c-faint: 143 156 152;
+  --c-accent: 232 166 60;
+  --c-accent-soft: 36 28 12;
+  --c-danger: 224 106 94;
+  --c-good: 111 191 149;
+  --c-warn: 232 178 79;
+}
+
+html {
+  color-scheme: light;
+}
+html[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-ground text-ink font-sans antialiased;
+  margin: 0;
+  min-height: 100dvh;
+}
+
+/* Фокус виден всегда: тренажёром пользуются и с клавиатуры. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid rgb(var(--c-accent));
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  .label {
+    @apply font-mono text-[0.68rem] uppercase tracking-[0.14em] text-faint;
+  }
+  .card {
+    @apply bg-surface border border-hair;
+  }
+  .btn {
+    @apply font-mono text-xs uppercase tracking-[0.1em] px-4 py-2 border border-line
+           text-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn:not(:disabled):hover {
+    @apply bg-raised;
+  }
+  .btn-primary {
+    @apply bg-accent text-ground border-accent;
+  }
+  .btn-primary:not(:disabled):hover {
+    @apply opacity-90 bg-accent;
+  }
+  .num {
+    @apply font-mono tabular-nums;
+  }
+  .input {
+    @apply bg-ground border border-hair px-2.5 py-1.5 text-sm text-ink w-full;
+  }
+  .input:focus {
+    @apply border-line;
+  }
+  .hairline {
+    @apply border-t border-hair;
+  }
+}
+
+/* Полосы прокрутки в тёмной теме по умолчанию слишком яркие. */
+* {
+  scrollbar-color: rgb(var(--c-line)) transparent;
+  scrollbar-width: thin;
+}
