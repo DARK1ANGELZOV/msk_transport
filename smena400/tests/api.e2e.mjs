@@ -284,6 +284,50 @@ check(
   'компетенции посчитаны по истории решений'
 )
 
+// ------------------------------------------------- возврат к развилке
+
+const deb = (await get('a', `/api/sessions/${sid}/debrief`)).data
+check(deb?.rewindPoints?.length > 0, 'разбор предлагает развилки для возврата')
+check(
+  deb.rewindPoints.every((p) => p.alternatives >= 1),
+  'в каждой развилке был реальный выбор'
+)
+
+const firstPoint = deb.rewindPoints[0]
+const back = await post('a', `/api/sessions/${sid}/rewind`, { step: firstPoint.step })
+check(back.status === 200, 'возврат к развилке выполнен', JSON.stringify(back.data))
+const bs = back.data?.screen
+check(bs?.step === firstPoint.step - 1, 'путь воспроизведён ровно до развилки')
+check(bs?.status === 'active', 'на развилке можно снова действовать')
+check(bs?.actions?.length > 1, 'на развилке есть из чего выбрать')
+
+// Уйти по другой ветке — и дойти до финала.
+const other = bs.actions.find((x) => x.id !== 'a-report') ?? bs.actions[0]
+let alt = (await post('a', `/api/sessions/${bs.sessionId}/actions`, { actionId: other.id })).data.screen
+let g2 = 0
+while (alt.status === 'active' && g2++ < 15) {
+  const nx = alt.state.kind === 'sequence'
+    ? await post('a', `/api/sessions/${bs.sessionId}/actions`, { order: alt.sequence.items.map((i) => i.id) })
+    : await post('a', `/api/sessions/${bs.sessionId}/actions`, { actionId: alt.actions[0].id })
+  if (nx.status !== 200) break
+  alt = nx.data.screen
+}
+check(alt.status === 'finished', 'прохождение с развилки дошло до финала')
+
+const altDeb = await get('a', `/api/sessions/${bs.sessionId}/debrief`)
+check(altDeb.data?.comparison !== null, 'после возврата есть с чем сравнить')
+
+const badStep = await post('a', `/api/sessions/${sid}/rewind`, { step: 99 })
+check(badStep.status === 409, 'возврат за пределы пути отклоняется')
+
+// ------------------------------------------------ нормативное основание
+
+check(
+  moved.data?.screen?.lastResult?.basis?.length > 20,
+  'последствие нормативно обоснованного действия показывает основание',
+  JSON.stringify(moved.data?.screen?.lastResult?.basis)
+)
+
 // --------------------------------------------------------------- таймер
 
 if (FAST) {

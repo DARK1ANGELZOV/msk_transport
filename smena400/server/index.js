@@ -28,6 +28,7 @@ import path from 'node:path'
 
 import { availableActions, startSession, step } from '../engine/machine.js'
 import { debrief, compareAttempts } from '../engine/feedback.js'
+import { rewindTo, rewindPoints } from '../engine/rewind.js'
 import { COMPETENCIES, SCALE_CATALOG, scalesOf } from '../engine/model.js'
 import { INTENT_REASON } from '../engine/intent.js'
 
@@ -162,11 +163,40 @@ const server = http.createServer(async (req, res) => {
         return ok(res, {
           debrief: report,
           attempt: run.attempt,
+          // К каким развилкам можно вернуться и попробовать иначе.
+          rewindPoints: rewindPoints(run.state.log),
           comparison: previous?.debrief
             ? compareAttempts(previous.debrief, report)
             : null,
           previousAttempt: previous?.attempt ?? null
         })
+      }
+
+      /*
+       * Возврат к развилке.
+       *
+       * Создаётся новая сессия, в которой записанный путь воспроизведён
+       * до указанного шага. Это не «загрузка снимка»: движок заново
+       * исполняет те же ходы, и если результат разойдётся с журналом,
+       * возврат честно откажет вместо того, чтобы показать человеку
+       * развилку, на которой он не был.
+       */
+      if (tail === '/rewind' && req.method === 'POST') {
+        if (run.status !== 'finished') return bad(res, 'ситуация ещё не пройдена', 409)
+        const body = await readBody(req)
+        const back = rewindTo(sc, run.state.log, Number(body.step))
+        if (!back.ok) return bad(res, back.error, 409)
+
+        const stale = runs.activeOf(playerId, sc.id)
+        if (stale) runs.abandon(stale.id, stale.state)
+
+        const id = newId('s')
+        const { attempt } = runs.create({
+          id, playerId, scenarioId: sc.id,
+          scenarioVersion: sc.version ?? 1, state: back.session
+        })
+        const fresh = { id, attempt, state: back.session }
+        return ok(res, { screen: await dress(sc, fresh), fromStep: Number(body.step) })
       }
 
       // ------------------------------------------------------- прерывание
@@ -318,7 +348,7 @@ async function finishTurn(res, sc, run, out) {
   }
 
   return ok(res, {
-    screen: await dress(sc, next, resultView(out.result)),
+    screen: await dress(sc, next, resultView(out.result, sc)),
     finished: out.session.status === 'finished'
   })
 }

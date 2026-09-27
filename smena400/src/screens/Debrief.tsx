@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 
 import {
-  api, type Comparison, type Debrief as Report, type Decision, type Scales, type TimelineItem
+  api, type Comparison, type Debrief as Report, type Decision,
+  type RewindPoint, type Scales, type TimelineItem
 } from '../lib/api'
 import { go } from '../lib/router'
 import { seconds, sign } from '../lib/format'
@@ -25,9 +26,28 @@ export function Debrief({ sessionId }: { sessionId: string }) {
     attempt: number
     comparison: Comparison | null
     previousAttempt: number | null
+    rewindPoints: RewindPoint[]
   } | null>(null)
   const [error, setError] = useState('')
   const [again, setAgain] = useState(false)
+
+  /**
+   * Вернуться к развилке.
+   *
+   * Сервер воспроизводит записанный путь до этого шага и ставит человека
+   * ровно туда, где он принимал решение, — со всеми последствиями прежних
+   * ходов. Это не «начать сначала»: проверяется одна гипотеза, а не всё
+   * прохождение заново.
+   */
+  const rewind = (step: number) => {
+    setAgain(true)
+    api.rewind(sessionId, step)
+      .then((r) => go(`/play/${r.screen.sessionId}`))
+      .catch((e) => {
+        setError(e.message)
+        setAgain(false)
+      })
+  }
 
   useEffect(() => {
     api.debrief(sessionId)
@@ -92,15 +112,34 @@ export function Debrief({ sessionId }: { sessionId: string }) {
         ))}
       </section>
 
-      {/* -------------------------------------- сравнение с прошлой попыткой */}
       {data.comparison && (
-        <Compare c={data.comparison} previous={data.previousAttempt} />
+        <Card className="p-4 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-accent">
+          <div>
+            <Label className="text-accent">Есть с чем сравнить</Label>
+            <p className="text-sm mt-1">
+              {data.comparison.outcomeChanged
+                ? `Исход изменился: было «${data.comparison.outcomeBefore}».`
+                : 'Исход тот же, что и в прошлой попытке.'}
+            </p>
+          </div>
+          <button className="btn btn-primary" onClick={() => go(`/compare/${sessionId}`)}>
+            Сравнить попытки
+          </button>
+        </Card>
       )}
 
       {/* ------------------------------------------- ключевые решения */}
       <section className="flex flex-col gap-3">
         <Label>Решения, которые определили исход</Label>
-        {d.decisions.map((dec) => <DecisionCard key={dec.step} d={dec} />)}
+        {d.decisions.map((dec) => (
+          <DecisionCard
+            key={dec.step}
+            d={dec}
+            canRewind={data.rewindPoints.some((p) => p.step === dec.step)}
+            busy={again}
+            onRewind={() => rewind(dec.step)}
+          />
+        ))}
       </section>
 
       {/* ------------------------------ что получилось / что улучшить */}
@@ -153,12 +192,18 @@ export function Debrief({ sessionId }: { sessionId: string }) {
       <section className="flex flex-col gap-3 border-t border-hair pt-5">
         <p className="text-sm text-muted max-w-[62ch]">
           Повторное прохождение — не работа над ошибками, а проверка гипотезы.
-          Ситуация будет той же; изменится только то, что сделаете вы.
+          Можно вернуться к конкретной развилке кнопкой под решением: всё,
+          что было до неё, сохранится, изменится только то, что вы решите там.
         </p>
         <div className="flex flex-wrap gap-3">
           <button className="btn btn-primary" onClick={retry} disabled={again}>
-            {again ? 'Входим…' : 'Пройти ещё раз'}
+            {again ? 'Входим…' : 'Пройти ситуацию заново'}
           </button>
+          {data.comparison && (
+            <button className="btn" onClick={() => go(`/compare/${sessionId}`)}>
+              Сравнить попытки
+            </button>
+          )}
           <button className="btn" onClick={() => go('/')}>К смене</button>
           <button className="btn btn-ghost" onClick={() => go('/progress')}>Профиль</button>
         </div>
@@ -174,7 +219,14 @@ export function Debrief({ sessionId }: { sessionId: string }) {
  * его последствие, его влияние на шкалы. Никакой оценки «надо было так»:
  * человек сам сравнит два последствия и сделает вывод.
  */
-function DecisionCard({ d }: { d: Decision }) {
+function DecisionCard({
+  d, canRewind, busy, onRewind
+}: {
+  d: Decision
+  canRewind: boolean
+  busy: boolean
+  onRewind: () => void
+}) {
   return (
     <Card className="p-4 flex flex-col gap-4">
       <div>
@@ -206,6 +258,12 @@ function DecisionCard({ d }: { d: Decision }) {
             <p className="text-sm mt-2 max-w-[62ch] text-ink/90">{d.alternative.outcome_hint}</p>
           )}
         </div>
+      )}
+
+      {canRewind && (
+        <button className="btn self-start" onClick={onRewind} disabled={busy}>
+          {busy ? 'Возвращаемся…' : 'Вернуться сюда и решить иначе'}
+        </button>
       )}
     </Card>
   )
@@ -242,58 +300,6 @@ function Effects({ effects }: { effects: Partial<Scales> }) {
         </span>
       ))}
     </div>
-  )
-}
-
-/** Сравнение с прошлой попыткой: ровно то, что доказывает влияние решений. */
-function Compare({ c, previous }: { c: Comparison; previous: number | null }) {
-  return (
-    <Card className="p-4 flex flex-col gap-4 border-l-2 border-l-accent">
-      <Label className="text-accent">
-        Сравнение с попыткой {previous ?? '—'}
-      </Label>
-
-      <div className="flex flex-wrap gap-x-8 gap-y-3">
-        {c.scales.map((s) => (
-          <div key={s.id}>
-            <span className="label">{s.short}</span>
-            <div className="flex items-baseline gap-2 num">
-              <span className="text-faint">{s.before}</span>
-              <span className="text-faint" aria-hidden="true">→</span>
-              <span className="text-lg">{s.after}</span>
-              <span className={s.delta >= 0 ? 'text-good text-xs' : 'text-danger text-xs'}>
-                {sign(s.delta)}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <p className="text-sm">
-        {c.outcomeChanged ? (
-          <>
-            Исход изменился: было «{c.outcomeBefore}», стало «{c.outcomeAfter}».
-          </>
-        ) : (
-          <>Исход тот же: «{c.outcomeAfter}». Значит, решающее решение осталось прежним.</>
-        )}
-      </p>
-
-      {c.changedDecisions.length > 0 && (
-        <div>
-          <Label>Что вы сделали по-другому</Label>
-          <ul className="mt-2 flex flex-col gap-2 text-sm list-none p-0">
-            {c.changedDecisions.map((x) => (
-              <li key={x.step} className="border-l-2 border-hair pl-3">
-                <span className="label">шаг {x.step}</span>
-                <p className="text-muted line-through decoration-faint/60">{x.before}</p>
-                <p>{x.after}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </Card>
   )
 }
 

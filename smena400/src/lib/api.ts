@@ -70,6 +70,8 @@ export interface ActionView {
 
 export interface ResultView {
   actionLabel: string | null
+  /** Норма, на которую опиралось действие. Отвечает на «почему так вышло». */
+  basis: string | null
   effects: Partial<Scales>
   consequence: string | null
   timedOut: boolean
@@ -175,6 +177,14 @@ export type TimelineItem =
       late: boolean
     }
 
+export interface RewindPoint {
+  step: number
+  label: string
+  situation: string
+  key: boolean
+  alternatives: number
+}
+
 export interface Comparison {
   scales: (ScaleMeta & { before: number; after: number; delta: number })[]
   outcomeChanged: boolean
@@ -265,11 +275,16 @@ export const api = {
 
   quit: (id: string) => post<{ status: string }>(`/api/sessions/${id}/finish`),
 
+  /** Вернуться к развилке: движок воспроизводит путь до указанного шага. */
+  rewind: (id: string, step: number) =>
+    post<{ screen: Screen; fromStep: number }>(`/api/sessions/${id}/rewind`, { step }),
+
   debrief: (id: string) =>
     call<{
       debrief: Debrief
       attempt: number
       comparison: Comparison | null
       previousAttempt: number | null
+      rewindPoints: RewindPoint[]
     }>(`/api/sessions/${id}/debrief`)
 }

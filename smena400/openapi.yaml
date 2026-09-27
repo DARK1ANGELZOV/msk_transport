@@ -44,14 +44,16 @@ paths:
                 type: object
                 properties:
                   ok: { type: boolean }
-                  scenarios: { type: integer, example: 3 }
+                  scenarios: { type: integer, example: 5 }
 
   /api/meta:
     get:
       tags: [Справочники]
-      summary: Шкалы, компетенции и состояние AI-слоя
+      summary: Справочник показателей, компетенций и состояние AI-слоя
       description: |
-        Возвращает ровно две шкалы и пять компетенций. Поле `ai.enabled`
+        Возвращает **справочник** возможных показателей состояния — какие
+        именно показывает конкретная ситуация, решает её паспорт (поле
+        `scaleMeta` в экране и паспорте). Компетенций пять. Поле `ai.enabled`
         показывает, подключена ли модель; при `false` продукт полностью
         работоспособен — свободную речь разбирает собственный анализатор.
       responses:
@@ -268,6 +270,51 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { $ref: "#/components/responses/Refused" }
 
+  /api/sessions/{id}/rewind:
+    post:
+      tags: [Прохождение]
+      summary: Вернуться к развилке и решить иначе
+      description: |
+        Создаёт новую сессию, в которой записанный путь **воспроизведён заново**
+        до указанного шага. Это не загрузка снимка состояния: движок
+        детерминирован, поэтому те же входы дают то же состояние, и путь
+        просто исполняется повторно — с теми же таймингами, включая шаги,
+        которые были бездействием.
+
+        Если воспроизведение расходится с журналом, возврат отказывает
+        (`409`), а не показывает человеку развилку, на которой он не был.
+
+        Доступные шаги перечислены в ответе `/debrief` полем `rewindPoints`:
+        это только те шаги, где выбор действительно был.
+      parameters:
+        - $ref: "#/components/parameters/SessionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [step]
+              properties:
+                step:
+                  type: integer
+                  minimum: 1
+                  description: Шаг, НА который нужно вернуться.
+      responses:
+        "200":
+          description: Новая сессия, поставленная на развилку
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  fromStep: { type: integer }
+                  screen: { $ref: "#/components/schemas/Screen" }
+        "409":
+          description: Ситуация ещё не пройдена либо шаг вне записанного пути
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /api/sessions/{id}/finish:
     post:
       tags: [Прохождение]
@@ -310,6 +357,19 @@ paths:
                   ok: { type: boolean }
                   attempt: { type: integer }
                   previousAttempt: { type: integer, nullable: true }
+                  rewindPoints:
+                    type: array
+                    description: Развилки, к которым можно вернуться.
+                    items:
+                      type: object
+                      properties:
+                        step: { type: integer }
+                        label: { type: string }
+                        situation: { type: string }
+                        key: { type: boolean }
+                        alternatives:
+                          type: integer
+                          description: Сколько ещё вариантов было доступно на этом шаге.
                   debrief: { $ref: "#/components/schemas/Debrief" }
                   comparison:
                     nullable: true
@@ -580,6 +640,12 @@ components:
             loyalty: { type: integer }
             safety: { type: integer }
         consequence: { type: string, nullable: true }
+        basis:
+          type: string
+          nullable: true
+          description: |
+            Требование источника, на которое опиралось действие. Отвечает
+            на вопрос «почему так вышло» ссылкой на документ, а не оценкой.
         timedOut: { type: boolean }
         grade: { type: string, nullable: true, enum: [correct, partial, wrong] }
         correctOrder:

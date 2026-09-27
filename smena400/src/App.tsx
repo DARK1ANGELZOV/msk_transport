@@ -6,6 +6,7 @@ import { Login } from './screens/Login'
 import { Briefing } from './screens/Briefing'
 import { Play } from './screens/Play'
 import { Debrief } from './screens/Debrief'
+import { Compare } from './screens/Compare'
 import { Progress } from './screens/Progress'
 import { go, parts, useRoute } from './lib/router'
 import { Spinner } from './ui/kit'
@@ -69,6 +70,7 @@ export function App() {
         {seg[0] === 's' && seg[1] && <Briefing scenarioId={seg[1]} />}
         {seg[0] === 'play' && seg[1] && <Play sessionId={seg[1]} />}
         {seg[0] === 'debrief' && seg[1] && <Debrief sessionId={seg[1]} />}
+        {seg[0] === 'compare' && seg[1] && <Compare sessionId={seg[1]} />}
         {seg[0] === 'progress' && <Progress name={name} />}
       </main>
     </div>

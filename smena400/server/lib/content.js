@@ -133,8 +133,19 @@ export function screen(sc, run, { now = Date.now(), lastResult = null } = {}) {
  * именно сейчас. Игрок видит их как то, что произошло, и только в разборе
  * узнаёт, каким решением они были вызваны.
  */
-export const resultView = (result) => ({
+export const resultView = (result, scenario) => ({
   actionLabel: result.actionLabel ?? null,
+  /*
+   * Нормативное основание того, что только что произошло.
+   *
+   * Показывается ровно тогда, когда автор сценария пометил действие
+   * как опирающееся на источник, и берётся из того же правила, на которое
+   * он сослался. Это отвечает на вопрос «почему так вышло» ссылкой
+   * на документ, а не оценкой «правильно / неправильно».
+   */
+  basis: result.normativeRef !== null && result.normativeRef !== undefined
+    ? scenario?.source?.normative_rule?.[result.normativeRef] ?? null
+    : null,
   effects: result.effects ?? {},
   consequence: result.consequence ?? null,
   timedOut: Boolean(result.timedOut),

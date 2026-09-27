@@ -341,7 +341,7 @@ export function step(scenario, session, input = {}, { now = Date.now() } = {}) {
 }
 
 /** Применение выбранного действия: эффекты, флаги, отложенные последствия, переход. */
-function commit(scenario, session, action, { now, said, intent, timedOut }) {
+function commit(scenario, session, action, { now, said, intent, timedOut, order = null }) {
   const next = clone(session)
   const state = currentState(scenario, session)
   const thinkMs = Math.max(0, now - session.stateEnteredAt)
@@ -392,6 +392,7 @@ function commit(scenario, session, action, { now, said, intent, timedOut }) {
     normative: Boolean(action.normative),
     normative_ref: action.normative_ref ?? null,
     key: Boolean(action.key),
+    order,
     offered,
     thinkMs,
     timedOut,
@@ -410,6 +411,7 @@ function commit(scenario, session, action, { now, said, intent, timedOut }) {
     result: {
       actionId: action.id,
       actionLabel: action.label,
+      normativeRef: action.normative ? (action.normative_ref ?? null) : null,
       effects: applied,
       consequence: action.consequence ?? null,
       events: entered.events,
@@ -492,7 +494,9 @@ function sequence(scenario, session, input, now) {
     next: branch.next,
     key: Boolean(state.key)
   }
-  const out = commit(scenario, session, action, { now, said: null, intent: null, timedOut: false })
+  const out = commit(scenario, session, action, {
+    now, said: null, intent: null, timedOut: false, order
+  })
   if (out.ok) {
     out.result.grade = grade
     out.result.correctOrder = correct.map((id) => labels[id])

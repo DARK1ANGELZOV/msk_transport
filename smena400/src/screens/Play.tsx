@@ -249,6 +249,17 @@ function Consequence({
         <Card className={`p-5 border-l-4 ${result.timedOut ? 'border-l-danger' : 'border-l-accent'}`}>
           <p className="text-[1.05rem] leading-relaxed max-w-[60ch]">{result.consequence}</p>
           <Deltas effects={result.effects} meta={meta} className="mt-3" />
+
+          {/*
+            Почему так вышло. Не оценка «правильно / неправильно», а ссылка
+            на требование источника, на которое опиралось действие.
+          */}
+          {result.basis && (
+            <div className="mt-4 pt-4 border-t border-hair">
+              <Label className="text-safety">Основание</Label>
+              <p className="text-sm text-muted mt-1.5 max-w-[62ch]">{result.basis}</p>
+            </div>
+          )}
         </Card>
       )}
 

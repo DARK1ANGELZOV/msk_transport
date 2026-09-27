@@ -18,6 +18,7 @@ import {
 } from '../engine/machine.js'
 import { debrief, compareAttempts } from '../engine/feedback.js'
 import { validate } from '../engine/validate.js'
+import { rewindTo, rewindPoints } from '../engine/rewind.js'
 
 // ---------------------------------------------------------------- стенд
 
@@ -499,4 +500,104 @@ test('разные стратегии в боевом сценарии дают 
   assert.equal(best.outcome, 'f-good')
   assert.equal(worst.outcome, 'f-bad')
   assert.ok(best.scales.safety > worst.scales.safety)
+})
+
+// -------------------------------------------------- возврат к развилке
+
+test('путь воспроизводится до указанного шага в точности', () => {
+  // Это не только функция продукта, но и проверка детерминированности:
+  // если бы движок где-то зависел от случайности или внешнего состояния,
+  // воспроизведение разошлось бы с оригиналом.
+  const sc = rig()
+  let s = startSession(sc)
+  s = step(sc, s, { actionId: 'a-good' }, { now: at(s, 1500) }).session
+  s = step(sc, s, { actionId: 'a-next' }, { now: at(s, 900) }).session
+  s = step(sc, s, { actionId: 'a-end-good' }, { now: at(s, 700) }).session
+
+  const back = rewindTo(sc, s.log, 2)
+  assert.equal(back.ok, true, back.error)
+  assert.equal(back.session.stateId, 's2', 'вернулись на второй шаг')
+  assert.equal(back.session.step, 1, 'выполнен ровно один ход')
+  assert.deepEqual(back.session.scales, { loyalty: 52, safety: 60 },
+    'показатели совпадают с оригиналом в этой точке')
+  assert.ok(back.session.flags.includes('reported'))
+})
+
+test('с развилки можно уйти по другой ветке', () => {
+  const sc = rig()
+  let s = startSession(sc)
+  s = step(sc, s, { actionId: 'a-good' }, { now: at(s, 1000) }).session
+  s = step(sc, s, { actionId: 'a-next' }, { now: at(s, 1000) }).session
+  s = step(sc, s, { actionId: 'a-end-good' }, { now: at(s, 1000) }).session
+  assert.equal(s.outcome, 'f-good')
+
+  const back = rewindTo(sc, s.log, 3).session
+  const other = step(sc, back, { actionId: 'a-end-bad' }, { now: at(back, 1000) })
+  assert.equal(other.ok, true)
+  assert.equal(other.session.outcome, 'f-bad', 'другой выбор дал другой финал')
+})
+
+test('возврат воспроизводит и бездействие, и порядок действий', () => {
+  const sc = rig()
+  let s = startSession(sc)
+  // Первый шаг — просроченный: в журнале он должен остаться бездействием.
+  s = step(sc, s, { timeout: true }, { now: at(s, 10_000 + CLOCK_GRACE_MS + 1) }).session
+  s = step(sc, s, { actionId: 'a-next' }, { now: at(s, 800) }).session
+  s = step(sc, s, { order: ['i2', 'i1'] }, { now: at(s, 900) }).session
+
+  const back = rewindTo(sc, s.log, 4)
+  assert.equal(back.ok, true, back.error)
+  assert.equal(back.session.stateId, 's3')
+  assert.equal(back.session.scales.safety, 41,
+    'бездействие и неверный порядок воспроизвелись с теми же эффектами')
+})
+
+test('возврат за пределы пути отклоняется', () => {
+  const sc = rig()
+  let s = startSession(sc)
+  s = step(sc, s, { actionId: 'a-good' }, { now: at(s, 1000) }).session
+  assert.equal(rewindTo(sc, s.log, 0).ok, false)
+  assert.equal(rewindTo(sc, s.log, 9).ok, false)
+})
+
+test('развилками считаются только шаги, где выбор действительно был', () => {
+  const sc = rig()
+  let s = startSession(sc)
+  s = step(sc, s, { actionId: 'a-good' }, { now: at(s, 1000) }).session
+  s = step(sc, s, { actionId: 'a-next' }, { now: at(s, 1000) }).session
+  s = step(sc, s, { actionId: 'a-end-good' }, { now: at(s, 1000) }).session
+
+  const points = rewindPoints(s.log)
+  assert.equal(points.length, 3)
+  assert.ok(points.every((p) => p.alternatives >= 1), 'у каждой развилки есть альтернатива')
+  assert.equal(points[0].step, 1)
+})
+
+test('возврат к развилке в боевом сценарии даёт другой исход', () => {
+  const sc = JSON.parse(fs.readFileSync('content/scenarios/sit-19-medical.json', 'utf8'))
+  const playFrom = (session, prefer) => {
+    let s = session
+    let i = 0
+    while (s.status === 'active' && i++ < 30) {
+      const st = currentState(sc, s)
+      const now = s.stateEnteredAt + 1000
+      const out = st.kind === 'sequence'
+        ? step(sc, s, { order: st.correct_order }, { now })
+        : step(sc, s, {
+            actionId: prefer.find((id) => availableActions(sc, s).some((a) => a.id === id))
+              ?? availableActions(sc, s)[0].id
+          }, { now })
+      if (!out.ok) break
+      s = out.session
+    }
+    return s
+  }
+
+  const first = playFrom(startSession(sc), ['a-calm', 'a-crowd'])
+  assert.equal(first.outcome, 'f-bad')
+
+  const back = rewindTo(sc, first.log, 1)
+  assert.equal(back.ok, true, back.error)
+  const second = playFrom(back.session, ['a-report', 'a-detail', 'a-handover', 'a-final-full'])
+  assert.notEqual(second.outcome, first.outcome, 'с той же развилки другой путь дал другой финал')
 })

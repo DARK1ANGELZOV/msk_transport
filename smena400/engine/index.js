@@ -21,4 +21,6 @@ export { classify, stem, stems, buildIndex, INTENT, INTENT_REASON } from './inte
 
 export { debrief, compareAttempts } from './feedback.js'
 
+export { rewindTo, rewindPoints } from './rewind.js'
+
 export { validate, edgesOf } from './validate.js'
